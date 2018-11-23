@@ -45,7 +45,7 @@ void oops();
 //2.1.3 Waiting in exceptional circumstances
 //Listing 2.2 Waiting for a thread to finish
 void do_something_in_current_thread();
-void f();
+void f_oops_exception();
 
 //Listing 2.3 Using RAII to wait for a thread to complete
 class thread_gurad {
@@ -60,7 +60,38 @@ public:
     thread_gurad(thread_gurad const&) = delete;
     thread_gurad& operator=(thread_gurad const&) = delete;
 };
-void f_2_3();
+void f_thread_guard();
+
+
+//2.1.4 Running threads in the background
+void do_background_work();
+void run_thread_background();
+
+//Listing 2.4 Detaching a thread to handle other documents
+enum DOC_OPREA_TYPE {
+    open_new_document = 0
+};
+class user_command {
+public:
+    DOC_OPREA_TYPE type;
+public:
+    user_command() : type(open_new_document) {}
+    user_command(DOC_OPREA_TYPE const &type_) :type(type_) {}
+    ~user_command() {}
+};
+void open_document_and_display(std::string const &filename);
+bool done_editing();
+user_command const get_user_input();
+std::string const get_filename_from_user(); //tips: don`t try to return a refrence, or you will get noting but an error:
+                                            //(error) Reference to temporary returned.
+void process_user_input(user_command const &cmd);
+void edit_document(std::string const &filename);
+void edit_document_test();
+
+//2.2 Passing arguments to a thread function
+void f_passing_argument_test(int i, std::string const& s);
+void oops(int some_param);
+void not_oops(int some_param);
 
 
 }//namespace thread_manage

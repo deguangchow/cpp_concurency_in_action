@@ -21,6 +21,7 @@ static const unsigned long MILLION                = 1000000;      //百万
 static const unsigned long TEN_MILLION            = 10000000;     //千万
 static const unsigned long BILLION                = 100000000;    //亿
 
+static const unsigned BUFFER_1024                 = 1024;         //缓冲区大小(1024)
 
 #endif  //COMMON_DEF_H
 

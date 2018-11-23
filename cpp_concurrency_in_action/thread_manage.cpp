@@ -54,14 +54,14 @@ void oops() {
     FUNC my_func(some_local_state);
     std::thread my_thread(my_func);
     my_thread.detach(); //Do not wait for the my_thread to finish
-}
+}                       //The my_thread might still be running
 
 void do_something_in_current_thread() {
     TICK();
     throw std::exception();//throw a exception.
 }
 
-void f() {
+void f_oops_exception() {
     TICK();
 
     int some_local_state = 0;
@@ -76,7 +76,7 @@ void f() {
     t.join();
 }
 
-void f_2_3() {
+void f_thread_guard() {
     TICK();
 
     int some_local_state = 0;
@@ -87,8 +87,87 @@ void f_2_3() {
     do_something_in_current_thread();
 }
 
-//The my_thread might still be running
+void do_background_work() {
+    TICK();
+}
 
+void run_thread_background() {
+    TICK();
+
+    std::thread t(do_background_work);
+    t.detach();
+    assert(!t.joinable());
+}
+
+void open_document_and_display(std::string const &filename) {
+    TICK();
+}
+
+bool done_editing() {
+    TICK();
+    unsigned n = rand();
+    //errno_t err = rand_s(&n);
+    return 0 == n%2;
+}
+
+user_command const get_user_input() {
+    TICK();
+    return user_command();
+}
+
+std::string const get_filename_from_user() {
+    TICK();
+    return std::string();
+}
+
+void process_user_input(user_command const &cmd) {
+    TICK();
+}
+
+void edit_document(std::string const &filename) {
+    TICK();
+
+    open_document_and_display(filename);
+    while (!done_editing()) {
+        user_command cmd = get_user_input();
+        if (cmd.type == open_new_document) {
+            std::string const &new_name = get_filename_from_user();
+            std::thread t(edit_document, new_name);
+            t.detach();
+        } else {
+            process_user_input(cmd);
+        }
+    }
+}
+
+void edit_document_test() {
+    TICK();
+
+    std::string const &filename = "a.doc";
+    edit_document(filename);
+}
+
+void f_passing_argument_test(int i, std::string const& s) {
+    TICK();
+}
+
+void oops(int some_param) {
+    TICK();
+
+    char buffer[BUFFER_1024];
+    sprintf_s(buffer, BUFFER_1024, "%i", some_param);
+    std::thread t(f_passing_argument_test, 3, buffer);
+    t.detach();
+}
+
+void not_oops(int some_param) {
+    TICK();
+
+    char buffer[BUFFER_1024];
+    sprintf_s(buffer, BUFFER_1024, "%i", some_param);
+    std::thread t(f_passing_argument_test, 3, std::string(buffer));
+    t.detach();
+}
 }//namespace thread_manage
 
 

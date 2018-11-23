@@ -16,6 +16,7 @@
 #include <iostream>
 #include <thread>
 #include <fstream>
+#include <assert.h>
 
 //+ user`s head file.
 #include "targetver.h"
