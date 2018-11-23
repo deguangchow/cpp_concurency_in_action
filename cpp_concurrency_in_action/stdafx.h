@@ -19,6 +19,7 @@
 
 //+ user`s head file.
 #include "targetver.h"
+#include "common_def.h"
 #include "console_log.h"
 
 

@@ -27,18 +27,25 @@ void launching_thread_test();
 
 
 //Listing 2.1: A function that returns while a thread still has access to local variables.
-void do_something(int &i);;
+void do_something(int &i);
 typedef struct func {
     int &i;
     func(int &i_) :i(i_) {}
     void operator()() {
-        for (unsigned j = 0; j < 1000000; ++j) {
+        for (unsigned j = 0; j < MILLION; ++j) {
             do_something(i);//Potential access to dangling reference.
         }
     }
 }FUNC;
 typedef std::shared_ptr<FUNC> ptrFUNC;
 void oops();
+
+//2.1.2 Waiting for a thread to complete
+
+//2.1.3 Waiting in exceptional circumstances
+//Listing 2.2 Waiting for a thread to finish
+void do_something_in_current_thread();
+void f();
 
 }//namespace thread_manage
 

@@ -20,10 +20,11 @@ int main() {
     thread_test::hello_concurrency();
 #endif
 
-#if 1//chapter2
+#if 0//chapter2
     thread_manage::launching_thread_test();
     thread_manage::oops();
 #endif
+    thread_manage::f();
 
     return 0;
 }

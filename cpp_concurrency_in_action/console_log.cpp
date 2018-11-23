@@ -55,7 +55,7 @@ FOREGROUND_INTENSITY |FOREGROUND_INTENSITY)
 int Tick::FuncDeep = 0;
 char Tick::Prefix[1024] = { 0 };
 
-Tick::Tick(const char* funcname) :fn(funcname) {
+Tick::Tick(const char* funcname) :fn(funcname), t(0) {
 #if _WIN32
     t = GetTickCount();
 #endif
@@ -222,7 +222,7 @@ public:
         AllocConsole();
         SetConsoleTitle(GetTitle());
         FILE *fp = nullptr;
-        freopen_s(&fp, "CONOUT$", "w", stdout);
+        errno_t err = freopen_s(&fp, "CONOUT$", "w", stdout);
         DisableClose();
 
 #ifdef _DEBUG

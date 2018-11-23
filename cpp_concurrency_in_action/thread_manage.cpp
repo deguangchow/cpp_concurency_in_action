@@ -55,6 +55,26 @@ void oops() {
     std::thread my_thread(my_func);
     my_thread.detach(); //Do not wait for the my_thread to finish
 }
+void do_something_in_current_thread() {
+    TICK();
+    throw std::exception();//throw a exception.
+}
+
+void f() {
+    TICK();
+
+    int some_local_state = 0;
+    FUNC my_func(some_local_state);
+    std::thread t(my_func);
+    try {
+        do_something_in_current_thread();
+    } catch (...) {//catch a exception.
+        t.join();
+        throw;
+    }
+    t.join();
+}
+
 //The my_thread might still be running
 
 }//namespace thread_manage
