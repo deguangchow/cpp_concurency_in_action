@@ -1,0 +1,16 @@
+
+*.txt
+*.tlog
+*.obj
+*.log
+*.idb
+*.pdb
+.vs/cpp_concurency_in_action/v14/.suo
+*.db
+*.opendb
+*.exe
+*.ilk
+*.ipch
+*.pch
+*.iobj
+*.ipdb
