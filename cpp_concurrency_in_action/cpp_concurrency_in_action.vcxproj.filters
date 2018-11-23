@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="chapter1">
+      <UniqueIdentifier>{0a1c611b-b5a0-4a9d-af2c-5d16b5310d6c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -24,13 +27,19 @@
     <ClInclude Include="targetver.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="thread_test.h">
+      <Filter>chapter1</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="cpp_concurency_in_action.cpp">
+    <ClCompile Include="cpp_concurrency_in_action.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="thread_test.cpp">
+      <Filter>chapter1</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

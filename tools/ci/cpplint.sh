@@ -11,8 +11,8 @@ python tools/ci/cpplint.py --filter=\
 -runtime/int,\
 -runtime/references \
     --linelength=120 \
-	$(find cpp_concurency_in_action/ -name "*.h") \
-	$(find cpp_concurency_in_action/ -name "*.cpp") \
+	$(find cpp_concurrency_in_action/ -name "*.h") \
+	$(find cpp_concurrency_in_action/ -name "*.cpp") \
     > $LOG_FILE
 
 echo "===================== cpplint end  ====================="
