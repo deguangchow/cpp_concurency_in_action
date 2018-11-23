@@ -23,8 +23,10 @@ int main() {
 #if 0//chapter2
     thread_manage::launching_thread_test();
     thread_manage::oops();
-#endif
     thread_manage::f();
+#endif
+
+    thread_manage::f_2_3();
 
     return 0;
 }

@@ -47,6 +47,22 @@ void oops();
 void do_something_in_current_thread();
 void f();
 
+//Listing 2.3 Using RAII to wait for a thread to complete
+class thread_gurad {
+    std::thread &t;
+public:
+    explicit thread_gurad(std::thread &t_) : t(t_) { }
+    ~thread_gurad() {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+    thread_gurad(thread_gurad const&) = delete;
+    thread_gurad& operator=(thread_gurad const&) = delete;
+};
+void f_2_3();
+
+
 }//namespace thread_manage
 
 #endif  //THREAD_MANAGE_H
