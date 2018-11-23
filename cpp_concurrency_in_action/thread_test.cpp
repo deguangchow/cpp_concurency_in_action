@@ -11,18 +11,22 @@
 
 namespace thread_test {
 
-    void hello_test() {
-        std::cout << "Hello World" << std::endl;
-    }
+void hello_test() {
+    TICK();
+    std::cout << "Hello World" << std::endl;
+}
 
-    void hello() {
-        std::cout << "Hello Concurrent world" << std::endl;
-    }
+void hello() {
+    TICK();
+    std::cout << "Hello Concurrent world" << std::endl;
+}
 
-    void hello_concurrency() {
-        std::thread t(hello);
-        t.join();
-    }
+void hello_concurrency() {
+    TICK();
+    std::thread t(hello);
+    t.join();
+}
+
 }//namespace thread_test
 
 

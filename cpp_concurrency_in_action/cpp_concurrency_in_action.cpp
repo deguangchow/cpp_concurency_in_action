@@ -10,14 +10,20 @@
 ///    \2018/11/23
 #include "stdafx.h"
 #include "thread_test.h"
+#include "thread_manage.h"
 
 int main() {
+    TICK();
+
 #if 0//chapter1
     thread_test::hello_test();
+    thread_test::hello_concurrency();
 #endif
 
-    thread_test::hello_concurrency();
-
+#if 1//chapter2
+    thread_manage::launching_thread_test();
+    thread_manage::oops();
+#endif
 
     return 0;
 }

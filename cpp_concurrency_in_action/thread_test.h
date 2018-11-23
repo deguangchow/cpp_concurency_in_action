@@ -11,10 +11,12 @@
 #define THREAD_TEST_H
 
 namespace thread_test {
-    void hello_test();
 
-    void hello();
-    void hello_concurrency();
+void hello_test();
+
+void hello();
+void hello_concurrency();
+
 }//namespace thread_test
 
 #endif  //THREAD_TEST_H

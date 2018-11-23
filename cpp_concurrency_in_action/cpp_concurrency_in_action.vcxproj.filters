@@ -16,6 +16,12 @@
     <Filter Include="chapter1">
       <UniqueIdentifier>{0a1c611b-b5a0-4a9d-af2c-5d16b5310d6c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter2">
+      <UniqueIdentifier>{1c389a56-74d4-437b-960b-7315a3dd7d97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{249facff-e40d-4492-b869-bb2e1d4ed9ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -30,6 +36,12 @@
     <ClInclude Include="thread_test.h">
       <Filter>chapter1</Filter>
     </ClInclude>
+    <ClInclude Include="thread_manage.h">
+      <Filter>chapter2</Filter>
+    </ClInclude>
+    <ClInclude Include="console_log.h">
+      <Filter>log</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -40,6 +52,12 @@
     </ClCompile>
     <ClCompile Include="thread_test.cpp">
       <Filter>chapter1</Filter>
+    </ClCompile>
+    <ClCompile Include="thread_manage.cpp">
+      <Filter>chapter2</Filter>
+    </ClCompile>
+    <ClCompile Include="console_log.cpp">
+      <Filter>log</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
