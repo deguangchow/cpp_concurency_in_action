@@ -31,9 +31,10 @@ int main() {
     thread_manage::oops_again(42);
     thread_manage::x_test();
     thread_manage::x1_test();
+    thread_manage::move_test();
 #endif
 
-    thread_manage::move_test();
+    thread_manage::thread_move_test();
 
     return 0;
 }

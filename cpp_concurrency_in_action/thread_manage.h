@@ -122,6 +122,11 @@ struct big_object {
 void process_big_object(std::unique_ptr<big_object>);
 void move_test();
 
+//2.3 Transferring ownship of a thread
+void some_function();
+void some_other_function();
+void thread_move_test();
+
 
 }//namespace thread_manage
 
