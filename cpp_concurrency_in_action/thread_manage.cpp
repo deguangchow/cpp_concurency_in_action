@@ -168,6 +168,61 @@ void not_oops(int some_param) {
     std::thread t(f_passing_argument_test, 3, std::string(buffer));
     t.detach();
 }
+
+void update_date_for_widget(widget_id w, widget_data &data) {
+    TICK();
+    data = 2;
+}
+
+void process_widget_data(widget_data const &data) {
+    TICK();
+    std::cout << data << std::endl;
+}
+
+void display_status() {
+    TICK();
+}
+
+void oops_again(widget_id w) {
+    TICK();
+
+    widget_data data = 1;
+    std::thread t(update_date_for_widget, w, std::ref(data));//Not euqal with the book: the 2nd param must be a ref.
+    display_status();
+    t.join();
+    process_widget_data(data);
+}
+
+void x_test() {
+    TICK();
+
+    X my_x;
+    std::thread t(&X::do_lengthy_work, &my_x);
+    t.join();
+}
+
+void x1_test() {
+    TICK();
+
+    X1 my_x1;
+    int num(0);
+    std::thread t(&X1::do_lengthy_work, &my_x1, num);
+    t.join();
+}
+
+void process_big_object(std::unique_ptr<big_object>) {
+    TICK();
+}
+
+void move_test() {
+    TICK();
+
+    std::unique_ptr<big_object> p(new big_object());
+    p->prepare_data(42);
+    std::thread t(process_big_object, std::move(p));
+    t.detach();
+}
+
 }//namespace thread_manage
 
 

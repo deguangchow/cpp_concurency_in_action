@@ -27,9 +27,13 @@ int main() {
     thread_manage::f_thread_guard();
     thread_manage::edit_document_test();
     thread_manage::oops(42);
+    thread_manage::not_oops(42);
+    thread_manage::oops_again(42);
+    thread_manage::x_test();
+    thread_manage::x1_test();
 #endif
 
-    thread_manage::not_oops(42);
+    thread_manage::move_test();
 
     return 0;
 }

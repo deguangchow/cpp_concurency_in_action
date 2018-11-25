@@ -93,6 +93,35 @@ void f_passing_argument_test(int i, std::string const& s);
 void oops(int some_param);
 void not_oops(int some_param);
 
+typedef unsigned widget_id;
+typedef unsigned widget_data;
+void update_date_for_widget(widget_id w, widget_data &data);
+void process_widget_data(widget_data const &data);
+void display_status();
+void oops_again(widget_id w);
+
+class X {
+public:
+    void do_lengthy_work() { TICK(); }
+};
+void x_test();
+
+class X1 {
+public:
+    void do_lengthy_work(int num) { TICK(); }
+};
+void x1_test();
+
+struct big_object {
+    unsigned data;
+    void prepare_data(unsigned const &data_) {
+        TICK();
+        data = data_;
+    }
+};
+void process_big_object(std::unique_ptr<big_object>);
+void move_test();
+
 
 }//namespace thread_manage
 
