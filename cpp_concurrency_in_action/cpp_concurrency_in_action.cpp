@@ -46,10 +46,10 @@ int main() {
     thread_sharing_data::foo();
     thread_sharing_data::stack_test();
     thread_sharing_data::thread_safe_stack_test();
+    thread_sharing_data::std_lock_test();
 #endif
 
-    thread_sharing_data::std_lock_test();
-
+    thread_sharing_data::hierarchical_mutex_test();
 
     return 0;
 }

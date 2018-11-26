@@ -88,6 +88,65 @@ void std_lock_test() {
     swap(x1, x2);
 }
 
+//3.2.5 Further guidelines for avoiding deadlock
+//Listing 3.7 Using a lock hierarchy to prevent deadlock
+thread_local unsigned long hierarchical_mutex::this_thread_hierarchy_value(ULONG_MAX);
+hierarchical_mutex high_level_mutex(TEN_THOUSAND);
+hierarchical_mutex low_level_mutex(THOUSAND * 5);
+hierarchical_mutex other_mutex(HUNDRED);
+
+int do_low_level_stuff() {
+    TICK();
+    return 0;
+}
+
+int low_level_func() {
+    TICK();
+    std::lock_guard<hierarchical_mutex> lk(low_level_mutex);
+    return do_low_level_stuff();
+}
+
+void do_high_level_stuff(int some_param) {
+    TICK();
+}
+
+void high_level_func() {
+    TICK();
+    std::lock_guard<hierarchical_mutex> lk(high_level_mutex);
+    return do_high_level_stuff(42);
+}
+
+void thread_a() {
+    TICK();
+    high_level_func();
+}
+
+void do_other_stuff() {
+    TICK();
+}
+
+void other_stuff() {
+    TICK();
+    high_level_func();//it`s thus violating the hierarchy: high_level_func() tries to acquire the high_level_mutex
+    do_other_stuff();
+}
+
+void thread_b() {
+    TICK();
+    std::lock_guard<hierarchical_mutex> lk(other_mutex);
+    other_stuff();
+}
+
+void hierarchical_mutex_test() {
+    TICK();
+    std::thread t1(thread_a);
+    std::thread t2(thread_b);
+    t1.join();
+    t2.join();
+}
+
+
+
 }//namespace thread_sharing_data
 
 
