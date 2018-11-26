@@ -198,6 +198,12 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
 
 void parallel_accumulate_test();
 
+//2.5 Identifying threads
+void do_master_thread_work();
+void do_common_work();
+void some_core_part_of_algorithm(std::thread::id master_thread);
+void identifying_threads_test();
+
 
 }//namespace thread_manage
 

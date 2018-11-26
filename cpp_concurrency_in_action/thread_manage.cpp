@@ -318,6 +318,30 @@ void parallel_accumulate_test() {
     INFO("ret=%d\r\n", ret);
 }
 
+void do_master_thread_work() {
+    TICK();
+}
+
+void do_common_work() {
+    TICK();
+}
+
+void some_core_part_of_algorithm(std::thread::id master_thread) {
+    TICK();
+
+    if (std::this_thread::get_id() == master_thread) {
+        do_master_thread_work();
+    }
+    do_common_work();
+}
+
+void identifying_threads_test() {
+    TICK();
+    std::thread::id master_thread = std::this_thread::get_id();
+    std::thread t(some_core_part_of_algorithm, master_thread);
+    t.join();
+}
+
 }//namespace thread_manage
 
 

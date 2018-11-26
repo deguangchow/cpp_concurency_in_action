@@ -37,8 +37,10 @@ int main() {
     thread_manage::g_1();
     thread_manage::scopt_thread_test();
     thread_manage::f_spawn_threads();
-#endif
     thread_manage::parallel_accumulate_test();
+#endif
+
+    thread_manage::identifying_threads_test();
     return 0;
 }
 
