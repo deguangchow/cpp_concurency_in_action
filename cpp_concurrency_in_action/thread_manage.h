@@ -154,6 +154,10 @@ public:
 };
 void scopt_thread_test();
 
+//Listing 2.7 Spawn some threads and wait for them to finish
+void do_work(unsigned id);
+void f_spawn_threads();
+
 }//namespace thread_manage
 
 #endif  //THREAD_MANAGE_H

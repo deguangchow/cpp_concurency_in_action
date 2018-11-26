@@ -35,9 +35,10 @@ int main() {
     thread_manage::thread_move_test();
     thread_manage::g_test();
     thread_manage::g_1();
+    thread_manage::scopt_thread_test();
 #endif
 
-    thread_manage::scopt_thread_test();
+    thread_manage::f_spawn_threads();
     return 0;
 }
 

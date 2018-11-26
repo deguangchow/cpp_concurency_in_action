@@ -21,6 +21,8 @@
 #include <fstream>
 #include <assert.h>
 #include<stdlib.h>
+#include <vector>
+#include <algorithm>
 
 //+ user`s head file.
 #include "targetver.h"
