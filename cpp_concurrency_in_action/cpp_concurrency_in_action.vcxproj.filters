@@ -22,6 +22,9 @@
     <Filter Include="log">
       <UniqueIdentifier>{249facff-e40d-4492-b869-bb2e1d4ed9ee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter3">
+      <UniqueIdentifier>{6f0f95f8-9b4b-4631-a4fa-dd85d3547779}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -45,6 +48,9 @@
     <ClInclude Include="common_def.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="thread_sharing_data.h">
+      <Filter>chapter3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -61,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="console_log.cpp">
       <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="thread_sharing_data.cpp">
+      <Filter>chapter3</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

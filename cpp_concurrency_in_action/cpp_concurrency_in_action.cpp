@@ -11,6 +11,7 @@
 #include "stdafx.h"
 #include "thread_test.h"
 #include "thread_manage.h"
+#include "thread_sharing_data.h"
 
 int main() {
     TICK();
@@ -38,9 +39,13 @@ int main() {
     thread_manage::scopt_thread_test();
     thread_manage::f_spawn_threads();
     thread_manage::parallel_accumulate_test();
+    thread_manage::identifying_threads_test();
 #endif
 
-    thread_manage::identifying_threads_test();
+#if 0//chapter3
+    thread_sharing_data::foo();
+#endif
+
     return 0;
 }
 

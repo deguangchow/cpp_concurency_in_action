@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <list>
+#include <mutex>
 
 //+ user`s head file.
 #include "targetver.h"
