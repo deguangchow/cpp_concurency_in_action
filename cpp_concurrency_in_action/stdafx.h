@@ -23,6 +23,7 @@
 #include<stdlib.h>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 //+ user`s head file.
 #include "targetver.h"

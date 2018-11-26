@@ -158,6 +158,47 @@ void scopt_thread_test();
 void do_work(unsigned id);
 void f_spawn_threads();
 
+//2.4 Choosing the number of threads at runtime
+//Listing 2.8 A naive parallel version of std::accumulate
+template<typename Iterator, typename T>
+struct accumulate_block {
+    void operator()(Iterator first, Iterator last, T &result) {
+        TICK();
+        result = std::accumulate(first, last, result);
+    }
+};
+template<typename Iterator, typename T>
+T parallel_accumulate(Iterator first, Iterator last, T init) {
+    TICK();
+
+    unsigned long const length = std::distance(first, last);
+    if (!length) {
+        return init;
+    }
+
+    unsigned long const min_per_thread = 25;
+    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
+    unsigned long const hardware_threads = std::thread::hardware_concurrency();
+    unsigned long const num_threads = std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const block_size = length / num_threads;
+    std::vector<T> results(num_threads);
+    std::vector<std::thread> threads(num_threads - 1);
+
+    Iterator block_start = first;
+    for (unsigned i = 0; i < num_threads - 1; ++i) {
+        Iterator block_end = block_start;
+        std::advance(block_end, block_size);
+        threads[i] = std::thread(accumulate_block<Iterator, T>(), block_start, block_end, std::ref(results[i]));
+        block_start = block_end;
+    }
+    accumulate_block<Iterator, T>()(block_start, last, results[num_threads - 1]);
+    std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+    return std::accumulate(results.begin(), results.end(), init);
+}
+
+void parallel_accumulate_test();
+
+
 }//namespace thread_manage
 
 #endif  //THREAD_MANAGE_H
