@@ -55,6 +55,32 @@ void stack_test() {
     }
 }
 
+thread_safe_stack<int> s;
+void thread_safe_stack_test() {
+    TICK();
+
+    unsigned const push_thread_num = THREAD_NUM_128 - 1;
+    unsigned const pop_thread_num = THREAD_NUM_128;
+
+    std::vector<std::thread> push_threads(push_thread_num);
+    std::vector<std::thread> pop_threads(pop_thread_num);
+
+    for (unsigned i = 0; i < push_thread_num; ++i) {
+        push_threads[i] = std::thread(&thread_safe_stack<int>::push, &s, i);
+    }
+    for (unsigned i = 0; i < pop_thread_num; ++i) {
+        pop_threads[i] = std::thread(&thread_safe_stack<int>::pop, &s);
+    }
+
+    for (unsigned i = 0; i < push_thread_num; ++i) {
+        push_threads[i].join();
+    }
+    for (unsigned i = 0; i < pop_thread_num; ++i) {
+        pop_threads[i].join();  //When the num of threads to pop data from the stack is more than to push,
+                                //there must be an "empty_stack" assert!
+    }
+}
+
 }//namespace thread_sharing_data
 
 

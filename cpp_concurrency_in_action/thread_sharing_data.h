@@ -97,6 +97,65 @@ public:
 
 void stack_test();
 
+//Listing 3.4 An outline class defination for a thread-safe stack
+
+//Listing 3.5 A fleshed-out class definition for a thread-safe stack
+struct empty_stack : std::exception {
+    const char* what() const throw() {
+        TICK();
+        return "empty_stack";
+    }
+};
+
+template<typename T>
+class thread_safe_stack {
+    std::stack<T> data;
+    mutable std::mutex m;
+
+public:
+    thread_safe_stack() {}
+    thread_safe_stack(const thread_safe_stack &other) : data(), m() {
+        TICK();
+        std::lock_guard<std::mutex> lock(other.m);
+        data = other.data;  //Copy performed in constructor body
+    }
+    thread_safe_stack& operator=(const thread_safe_stack &) = delete; //Assignment operator is deleted
+
+    void push(T new_value) {
+        TICK();
+        std::lock_guard<std::mutex> lock(m);
+        data.push(new_value);
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        std::lock_guard<std::mutex> lock(m);
+        if (data.empty()) { //Check for empty before trying to pop value
+            throw empty_stack();
+        }
+        std::shared_ptr<T> const res(std::make_shared<T>(data.top()));  //Allcate return value before modifying stack
+        data.pop();
+        return res;
+    }
+#if 0//If there are some override functions, the thread object init with it, something going wrong when compiling.
+    void pop(T &value) {
+        TICK();
+        std::lock_guard<std::mutex> lock(m);
+        if (data.empty()) {
+            throw empty_stack();
+        }
+        value = data.top();
+        data.pop();
+    }
+#endif
+    bool empty() const {
+        TICK();
+        std::lock_guard<std::mutex> lock(m);
+        return data.empty();
+    }
+};
+
+void thread_safe_stack_test();
+
 }//namespace thread_sharing_data
 
 #endif  //THREAD_SHARING_DATA_H
