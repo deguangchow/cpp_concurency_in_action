@@ -81,6 +81,13 @@ void thread_safe_stack_test() {
     }
 }
 
+void std_lock_test() {
+    TICK();
+    X<int> x1(some_big_object<int>(1));
+    X<int> x2(some_big_object<int>(2));
+    swap(x1, x2);
+}
+
 }//namespace thread_sharing_data
 
 

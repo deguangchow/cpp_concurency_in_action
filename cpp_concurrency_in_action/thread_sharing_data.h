@@ -156,6 +156,53 @@ public:
 
 void thread_safe_stack_test();
 
+//3.2.4 Deadlock: the problem and a solution
+//Listing 3.6 Using std::lock() and std::lock_guard in a swap operation
+template<typename T>
+class some_big_object {
+    T data;
+
+public:
+    explicit some_big_object(T val) : data(val) {}
+    void set_data(T const &val) {
+        data = val;
+    }
+    T get_data() {
+        return data;
+    }
+};
+
+template<typename T>
+void swap(some_big_object<T> &lhs, some_big_object<T> &rhs) {
+    TICK();
+    T tmp = lhs.get_data();
+    lhs.set_data(rhs.get_data());
+    rhs.set_data(tmp);
+}
+
+template<typename T>
+class X {
+private:
+    some_big_object<T> some_detail;
+    std::mutex m;
+public:
+    explicit X(some_big_object<T> const &sd) :some_detail(sd) {}
+
+    friend void swap(X<T> &lhs, X<T> &rhs) {
+        TICK();
+        if (&lhs == &rhs) {
+            return;
+        }
+        std::lock(lhs.m, rhs.m);
+        std::lock_guard<std::mutex> lock_a(lhs.m, std::adopt_lock);
+        std::lock_guard<std::mutex> lock_b(rhs.m, std::adopt_lock);
+        swap(lhs.some_detail, rhs.some_detail);
+    }
+};
+
+void std_lock_test();
+
+
 }//namespace thread_sharing_data
 
 #endif  //THREAD_SHARING_DATA_H
