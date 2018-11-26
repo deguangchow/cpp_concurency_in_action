@@ -76,7 +76,7 @@ public:
     DOC_OPREA_TYPE type;
 public:
     user_command() : type(open_new_document) {}
-    user_command(DOC_OPREA_TYPE const &type_) :type(type_) {}
+    explicit user_command(DOC_OPREA_TYPE const &type_) :type(type_) {}
     ~user_command() {}
 };
 void open_document_and_display(std::string const &filename);
@@ -127,6 +127,32 @@ void some_function();
 void some_other_function();
 void thread_move_test();
 
+//Listing 2.5 Returning a std::thread form a function
+std::thread f();
+void some_other_function_1(int num);
+std::thread g();
+void g_test();
+void f(std::thread t);
+void g_1();
+
+//Listing 2.6 scoped_thread and example usage
+class scoped_thread {
+    std::thread t;
+public:
+    explicit scoped_thread(std::thread t_) :t(std::move(t_)) {
+        TICK();
+        if (!t.joinable()) {
+            throw std::logic_error("No thread");
+        }
+    }
+    ~scoped_thread() {
+        TICK();
+        t.join();
+    }
+    //scoped_thread(scoped_thread const&) = delete;
+    scoped_thread& operator=(scoped_thread const&) = delete;
+};
+void scopt_thread_test();
 
 }//namespace thread_manage
 

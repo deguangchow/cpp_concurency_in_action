@@ -105,8 +105,8 @@ void open_document_and_display(std::string const &filename) {
 
 bool done_editing() {
     TICK();
-    unsigned n = rand();
-    //errno_t err = rand_s(&n);
+    unsigned n = 0;
+    errno_t err = rand_s(&n);
     return 0 == n%2;
 }
 
@@ -241,6 +241,50 @@ void thread_move_test() {
     t3 = std::move(t2);
     t1 = std::move(t3); //This assignment will terminate program!
                         //In this case t1 already had an associated thread.
+}
+
+
+std::thread f() {
+    TICK();
+    return std::thread(some_function);
+}
+
+void some_other_function_1(int num) {
+    TICK();
+}
+
+std::thread g() {
+    TICK();
+    std::thread t(some_other_function_1, 42);
+    return t;
+}
+
+void g_test() {
+    std::thread t = g();
+    t.join();
+}
+
+void f(std::thread t) {
+    TICK();
+    t.join();
+}
+
+void g_1() {
+    TICK();
+    f(std::thread(some_function));
+    std::thread t(some_function);
+    f(std::move(t));
+}
+
+void scopt_thread_test() {
+    TICK();
+
+    int some_local_state = 42;
+    FUNC f(some_local_state);
+    std::thread t_(f);
+    scoped_thread t(std::move(t_)); //Not equal to the book: scoped_thread`s constructor must be a right reference.
+                                    //std::thread::thread(const std::thread &) already be deleted.
+    do_something_in_current_thread();
 }
 
 }//namespace thread_manage

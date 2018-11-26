@@ -10,6 +10,9 @@
 #ifndef STDAFX_H
 #define STDAFX_H
 
+//for the usage of 'rand_s'
+#define _CRT_RAND_S
+
 //+ system`s head file.
 #include <stdio.h>
 #include <tchar.h>
@@ -17,6 +20,7 @@
 #include <thread>
 #include <fstream>
 #include <assert.h>
+#include<stdlib.h>
 
 //+ user`s head file.
 #include "targetver.h"

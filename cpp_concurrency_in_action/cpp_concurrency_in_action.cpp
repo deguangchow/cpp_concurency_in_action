@@ -32,10 +32,12 @@ int main() {
     thread_manage::x_test();
     thread_manage::x1_test();
     thread_manage::move_test();
+    thread_manage::thread_move_test();
+    thread_manage::g_test();
+    thread_manage::g_1();
 #endif
 
-    thread_manage::thread_move_test();
-
+    thread_manage::scopt_thread_test();
     return 0;
 }
 
