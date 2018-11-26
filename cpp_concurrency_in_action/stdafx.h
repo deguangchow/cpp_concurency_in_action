@@ -26,6 +26,7 @@
 #include <numeric>
 #include <list>
 #include <mutex>
+#include <deque>
 
 //+ user`s head file.
 #include "targetver.h"

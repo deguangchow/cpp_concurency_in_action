@@ -38,6 +38,23 @@ void foo() {
     unprotected->do_something();        //Unprotected access to protected data
 }
 
+void do_something(int val) {
+    TICK();
+}
+
+void stack_test() {
+    TICK();
+    stack<int> s;
+    s.push(1);
+    s.push(2);
+    s.push(3);
+    while (!s.empty()) {
+        int const value = s.top();
+        s.pop();
+        do_something(value);
+    }
+}
+
 }//namespace thread_sharing_data
 
 

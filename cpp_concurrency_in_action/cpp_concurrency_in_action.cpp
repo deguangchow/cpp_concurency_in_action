@@ -46,6 +46,8 @@ int main() {
     thread_sharing_data::foo();
 #endif
 
+    thread_sharing_data::stack_test();
+
     return 0;
 }
 

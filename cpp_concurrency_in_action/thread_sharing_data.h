@@ -43,6 +43,59 @@ public:
 };
 void foo();
 
+//3.2.3 Spotting race conditions inherent in interfaces
+//Listing 3.3 The interface to the std::stack container adapter
+template<typename T, typename Container = std::deque<T>>
+class stack {
+    Container container;
+
+public:
+    explicit stack(const Container&) {}
+    explicit stack(Container && = Container()) {}
+    template<class Alloc> explicit stack(const Alloc&) {}
+    template<class Alloc> stack(const Container&, const Alloc&) {}
+    template<class Alloc> stack(Container&&, const Alloc&) {}
+    template<class Alloc> stack(stack&&, const Alloc) {}
+
+    bool empty() const {
+        TICK();
+        return container.empty();
+    }
+    size_t size() const {
+        TICK();
+        return container.size();
+    }
+    T& top() {
+        TICK();
+        INFO("val=%d\r\n", container.back());
+        return container.back();
+    }
+    T const& top() const {
+        TICK();
+        INFO("val=%d\r\n", container.back());
+        return container.back();
+    }
+    void push(T const &val) {
+        TICK();
+        INFO("val=%d\r\n", val);
+        container.push_back(val);
+    }
+    void push(T &&val) {
+        TICK();
+        INFO("val=%d\r\n", val);
+        container.push_back(val);
+    }
+    void pop() {
+        TICK();
+        container.pop_back();
+    }
+    void swap(stack &&s) {
+        TICK();
+        container.swap(s);
+    }
+};
+
+void stack_test();
 
 }//namespace thread_sharing_data
 
