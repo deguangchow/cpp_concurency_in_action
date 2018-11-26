@@ -44,9 +44,10 @@ int main() {
 
 #if 0//chapter3
     thread_sharing_data::foo();
+    thread_sharing_data::stack_test();
 #endif
 
-    thread_sharing_data::stack_test();
+    thread_sharing_data::thread_safe_stack_test();
 
     return 0;
 }
