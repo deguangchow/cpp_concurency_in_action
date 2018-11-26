@@ -89,58 +89,45 @@ Tick::~Tick() {
 void Tick::info(char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    long t = 0;
-#ifdef _WIN32
-    t = GetTickCount();
-#endif //_DEBUG
-
     GreenOnBlack();
-    printf("[INFO  %10ld]%*s", t, FuncDeep, "");
+    printf("[INFO  %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
+    printf("\r\n");
 }
 
 void Tick::debug(char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    long t = 0;
-#ifdef _DEBUG
-    t = GetTickCount();
-#endif //_DEBUG
     BlueOnBlack();
-    printf("[DEBUG %10ld]%*s", t, FuncDeep, "");
+    printf("[DEBUG %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
+    printf("\r\n");
 }
 
 void Tick::warn(char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    long t = 0;
-#ifdef _DEBUG
-    t = GetTickCount();
-#endif //_DEBUG
     YellowOnBlack();
-    printf("[WARN  %10ld]%*s", t, FuncDeep, "");
+    printf("[WARN  %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
+    printf("\r\n");
 }
 
 void Tick::error(char* format, ...) {
     va_list vl;
     va_start(vl, format);
-    long t = 0;
-#ifdef _DEBUG
-    t = GetTickCount();
-#endif //_DEBUG
     RedOnBlack();
-    printf("\n[ERROR %10ld]%*s", t, FuncDeep, "");
+    printf("\n[ERROR %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
+    printf("\r\n");
 }
 
 #include <tchar.h>
@@ -166,7 +153,7 @@ void Tick::logfile(char* format, ...) {
     ::GetModuleFileName(NULL, szFilePath, MAX_PATH);
     (_tcsrchr(szFilePath, _T('\\')))[1] = 0; //delete filename, only get filepath
 
-    LPTSTR lpStr = lstrcat(szFilePath, _T("report_info.log"));
+    LPTSTR lpStr = lstrcat(szFilePath, _T("console_system.log"));
     if (!lpStr) {
         return;
     }
