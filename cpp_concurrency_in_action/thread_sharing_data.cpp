@@ -145,7 +145,86 @@ void hierarchical_mutex_test() {
     t2.join();
 }
 
+void std_lock_ex_test() {
+    TICK();
+    X_EX<int> x1(some_big_object<int>(1));
+    X_EX<int> x2(some_big_object<int>(2));
+    swap(x1, x2);
+}
 
+void prepare_data() {
+    TICK();
+}
+
+std::unique_lock<std::mutex> get_lock() {
+    TICK();
+    extern std::mutex some_mutex;
+    std::unique_lock<std::mutex> lk(some_mutex);
+    prepare_data();
+    return lk;
+}
+
+
+void do_something() {
+    TICK();
+}
+
+void process_data() {
+    TICK();
+    std::unique_lock<std::mutex> lk(get_lock());
+    do_something();
+}
+
+//3.2.8 Locking at an appropriate granularity
+std::mutex the_mutex;
+thread_sharing_data::some_class get_next_data_chunk() {
+    TICK();
+    return some_class();
+}
+
+thread_sharing_data::result_type process(some_class data) {
+    TICK();
+    return 0;
+}
+
+void write_result(some_class const& data, result_type &result) {
+    TICK();
+}
+
+void get_and_process_data() {
+    TICK();
+
+    std::unique_lock<std::mutex> my_lock(the_mutex);
+    some_class data_to_process = get_next_data_chunk();
+
+    INFO("Don`t need mutex locked across call to process()");
+    my_lock.unlock();
+    result_type result = process(data_to_process);
+
+    INFO("Relock mutex to write result");
+    my_lock.lock();
+    write_result(data_to_process, result);
+}
+
+void compare_operator_test() {
+    TICK();
+    int i1 = 1;
+    int i2 = 2;
+    Y<int> y1(i1);
+    Y<int> y2(i2);
+    INFO("%d %s %d", i1, y1 == y2 ? "==" : "!=", i2);
+}
+
+//3.3 Alternative facilities for protecting shared data
+//3.3.1 Protecting shared data during initialization
+std::shared_ptr<some_resource> resource_ptr = nullptr;
+void RAII_test() {
+    TICK();
+    if (!resource_ptr) {
+        resource_ptr.reset(new some_resource);
+    }
+    resource_ptr->do_something();
+}
 
 }//namespace thread_sharing_data
 

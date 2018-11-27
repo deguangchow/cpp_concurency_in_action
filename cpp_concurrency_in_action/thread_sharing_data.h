@@ -260,7 +260,83 @@ void thread_b();
 
 void hierarchical_mutex_test();
 
+//3.2.6 Flexible locking with std::unique_lock
+//Listing 3.9 Using std::lock() and std::unique_lock in a swap oopration
+template<typename T>
+class X_EX {
+private:
+    some_big_object<T> some_detail;
+    std::mutex m;
+    
+public:
+    explicit X_EX(some_big_object<T> const &sd) : some_detail(sd) {}
+    friend void swap(X_EX<T> &lhs, X_EX<T> &rhs) {
+        TICK();
+        if (&lhs == &rhs) {
+            return;
+        }
 
+        std::unique_lock<std::mutex> lock_a(lhs.m, std::defer_lock);
+        std::unique_lock<std::mutex> lock_b(rhs.m, std::defer_lock); //std::defer_lock leaves mutexes unlocked
+        std::lock(lock_a, lock_b);  //Mutexes are locked here
+        swap(lhs.some_detail, rhs.some_detail);
+    }
+};
+
+void std_lock_ex_test();
+
+//3.2.7 Transferring mutex ownership between scopes
+void prepare_data();
+std::unique_lock<std::mutex> get_lock();
+void do_something();
+void process_data();
+
+//3.2.8 Locking at an appropriate granularity
+class some_class {
+
+};
+some_class get_next_data_chunk();
+typedef unsigned result_type;
+result_type process(some_class data);
+void write_result(some_class const& data, result_type &result);
+void get_and_process_data();
+
+//Listing 3.10 Locking one mutex at a time in a comparison operator
+template<typename T>
+class Y {
+private:
+    T some_detail;
+    mutable std::mutex m;
+
+    T get_detail() const {
+        TICK();
+        std::lock_guard<std::mutex> lock_a(m);
+        return some_detail;
+    }
+public:
+    Y(T sd) :some_detail(sd) {}
+    friend bool operator==(Y<T> const &lhs, Y<T> const &rhs) {
+        TICK();
+        if (&lhs == &rhs) {
+            return true;
+        }
+        T const &lhs_value = lhs.get_detail();
+        T const &rhs_value = rhs.get_detail();
+        return lhs_value == rhs_value;
+    }
+};
+
+void compare_operator_test();
+
+//3.3 Alternative facilities for protecting shared data
+//3.3.1 Protecting shared data during initialization
+class some_resource {
+public:
+    void do_something() {
+        TICK();
+    }
+};
+void RAII_test();
 
 
 }//namespace thread_sharing_data
