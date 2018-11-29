@@ -52,10 +52,11 @@ int main() {
     thread_sharing_data::process_data();
     thread_sharing_data::get_and_process_data();
     thread_sharing_data::compare_operator_test();
-#endif      
-
     thread_sharing_data::RAII_test();
-
+    thread_sharing_data::call_once_test();
+    thread_sharing_data::Connection_call_once_test();
+#endif      
+    thread_sharing_data::Connection_concurrency_call_once_test();
     return 0;
 }
 

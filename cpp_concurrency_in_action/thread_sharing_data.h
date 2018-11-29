@@ -337,6 +337,75 @@ public:
     }
 };
 void RAII_test();
+void RAII_lock_test();
+void undefined_behaviour_with_double_checked_locking();
+void init_resource();
+void once_flag_test();
+void call_once_test();
+
+//Listing 3.12 Threads-safe lazy initialization of a class member using std::call_once
+class data_packet {
+
+};
+class connection_info {
+public:
+    connection_info() {
+
+    }
+};
+class connection_handle {
+public:
+    void send_data(data_packet const &data) {
+        TICK();
+    }
+    data_packet receive_data() {
+        TICK();
+        return data_packet();
+    }
+};
+class connection_manager {
+public:
+    connection_handle open(connection_info const &conn_info) {
+        TICK();
+        return connection_handle();
+    }
+};
+
+class Connection {
+private:
+    connection_manager conn_mgr;
+    connection_info connection_details;
+    connection_handle connection;
+    std::once_flag connection_init_flag;
+
+    void open_connection() {
+        TICK();
+        INFO("Initialization is called exactly once");
+        connection = conn_mgr.open(connection_details);
+    }
+public:
+    Connection(connection_info const &connection_details_) : connection_details(connection_details_) {
+
+    }
+    void send_data(data_packet const &data) {
+        TICK();
+        std::call_once(connection_init_flag, &Connection::open_connection, this);
+        connection.send_data(data);
+    }
+    data_packet receive_data() {
+        TICK();
+        std::call_once(connection_init_flag, &Connection::open_connection, this);
+        return connection.receive_data();
+    }
+};
+
+void Connection_call_once_test();
+void Connection_concurrency_call_once_test();
+
+class my_class {
+
+};
+my_class& get_my_class_instance();
 
 
 }//namespace thread_sharing_data

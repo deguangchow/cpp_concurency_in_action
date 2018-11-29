@@ -226,6 +226,84 @@ void RAII_test() {
     resource_ptr->do_something();
 }
 
+std::mutex resource_mutex;
+void RAII_lock_test() {
+    TICK();
+    std::unique_lock<std::mutex> lk(resource_mutex);    //All threads are serialized here
+    if (!resource_ptr) {
+        resource_ptr.reset(new some_resource);  //Only the initialization needs protection
+    }
+    lk.unlock();
+    resource_ptr->do_something();
+}
+
+void undefined_behaviour_with_double_checked_locking() {
+    TICK();
+    if (!resource_ptr) {
+        std::lock_guard<std::mutex> lk(resource_mutex);
+        if (!resource_ptr) {
+            resource_ptr.reset(new some_resource);
+        }
+    }
+    resource_ptr->do_something();
+}
+
+std::once_flag resource_flag;
+void init_resource() {
+    TICK();
+    INFO("Initialization is called exactly once");
+    resource_ptr.reset(new some_resource);
+}
+void once_flag_test() {
+    TICK();
+    std::call_once(resource_flag, init_resource);   //Initialization is called exactly once
+}
+
+void call_once_test() {
+    TICK();
+    unsigned const &uNumThread = THREAD_NUM_8;
+    std::vector<std::thread> vctThreads(uNumThread);
+    for (unsigned i = 0; i < uNumThread; ++i) {
+        vctThreads[i] = std::thread(once_flag_test);
+    }
+    for (unsigned i = 0; i < uNumThread; ++i) {
+        vctThreads[i].join();
+    }
+}
+
+void Connection_call_once_test() {
+    TICK();
+    connection_info conn_info;
+    Connection conn(conn_info);
+    data_packet data1;
+    data_packet data2;
+    conn.send_data(data1);
+    conn.send_data(data2);
+    data_packet const &data3 = conn.receive_data();
+    data_packet const &data4 = conn.receive_data();
+}
+
+void Connection_concurrency_call_once_test() {
+    TICK();
+    connection_info conn_info;
+    Connection conn(conn_info);
+    data_packet data1;
+    data_packet data2;
+    std::thread t1(&Connection::send_data, &conn, data1);
+    std::thread t2(&Connection::send_data, &conn, data2);
+    std::thread t3(&Connection::receive_data, &conn);
+    std::thread t4(&Connection::receive_data, &conn);
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+}
+
+my_class& get_my_class_instance() {
+    static my_class instance;   //Initialization guaranteed to be thread-safe
+    return instance;
+}
+
 }//namespace thread_sharing_data
 
 
