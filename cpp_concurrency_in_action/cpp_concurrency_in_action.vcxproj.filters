@@ -25,6 +25,9 @@
     <Filter Include="chapter3">
       <UniqueIdentifier>{6f0f95f8-9b4b-4631-a4fa-dd85d3547779}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter4">
+      <UniqueIdentifier>{aede19cd-4651-4490-a42a-3fc4d44b3ba2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -51,6 +54,9 @@
     <ClInclude Include="thread_sharing_data.h">
       <Filter>chapter3</Filter>
     </ClInclude>
+    <ClInclude Include="synchronizing_concurrent_operations.h">
+      <Filter>chapter4</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -70,6 +76,9 @@
     </ClCompile>
     <ClCompile Include="thread_sharing_data.cpp">
       <Filter>chapter3</Filter>
+    </ClCompile>
+    <ClCompile Include="synchronizing_concurrent_operations.cpp">
+      <Filter>chapter4</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
