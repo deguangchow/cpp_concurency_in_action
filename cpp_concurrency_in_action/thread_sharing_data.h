@@ -407,6 +407,11 @@ class my_class {
 };
 my_class& get_my_class_instance();
 
+//3.2.2 Protecting rarely updated data structures
+//Listing 3.13 Protecting a data structure with a boost::share_mutex
+//todo(deguangchow): there are no boost!!!
+
+//3.3.3 Recursive locking
 
 }//namespace thread_sharing_data
 

@@ -28,6 +28,7 @@
 #include <mutex>
 #include <deque>
 #include <stack>
+#include <map>
 
 //+ user`s head file.
 #include "targetver.h"
