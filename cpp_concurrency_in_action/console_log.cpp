@@ -54,6 +54,7 @@ FOREGROUND_INTENSITY |FOREGROUND_INTENSITY)
 
 int Tick::FuncDeep = 0;
 char Tick::Prefix[1024] = { 0 };
+static std::mutex mutex_console_log;    //mutex for multi-threading programming console log system.
 
 Tick::Tick(const char* funcname) :fn(funcname), t(0) {
 #if _WIN32
@@ -61,6 +62,7 @@ Tick::Tick(const char* funcname) :fn(funcname), t(0) {
 #endif
 #ifdef _DEBUG
     Prefix[FuncDeep] = ' '; ++FuncDeep;
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     MagentaOnBlack();
     printf("[CALL  %s]%s[>>]%s\n", unixTime2Str(), Prefix, funcname);
     DefaultOnBlack();
@@ -72,9 +74,12 @@ Tick::~Tick() {
 #if _WIN32
     long t2 = GetTickCount();
 #endif
-    WhiteOnBlack();
-    printf("[EXIT  %s]%s[<<]%s[%ld]\n", unixTime2Str(), Prefix, fn, t2 - t);
-    DefaultOnBlack();
+    {//Pay attention for the namespace of lock_console_log because the call of function 'WARN' using the same mutex!!!
+        std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
+        WhiteOnBlack();
+        printf("[EXIT  %s]%s[<<]%s[%ld]\n", unixTime2Str(), Prefix, fn, t2 - t);
+        DefaultOnBlack();
+    }
     Prefix[--FuncDeep] = '\0';
 
 #if _WIN32
@@ -89,6 +94,7 @@ Tick::~Tick() {
 void Tick::info(char* format, ...) {
     va_list vl;
     va_start(vl, format);
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     GreenOnBlack();
     printf("[INFO  %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
@@ -100,6 +106,7 @@ void Tick::info(char* format, ...) {
 void Tick::debug(char* format, ...) {
     va_list vl;
     va_start(vl, format);
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     BlueOnBlack();
     printf("[DEBUG %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
@@ -111,6 +118,7 @@ void Tick::debug(char* format, ...) {
 void Tick::warn(char* format, ...) {
     va_list vl;
     va_start(vl, format);
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     YellowOnBlack();
     printf("[WARN  %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);
@@ -122,6 +130,7 @@ void Tick::warn(char* format, ...) {
 void Tick::error(char* format, ...) {
     va_list vl;
     va_start(vl, format);
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     RedOnBlack();
     printf("\n[ERROR %s]%*s", unixTime2Str(), FuncDeep, "");
     vprintf(format, vl);

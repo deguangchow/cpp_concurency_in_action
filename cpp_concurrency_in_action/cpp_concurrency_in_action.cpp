@@ -12,6 +12,7 @@
 #include "thread_test.h"
 #include "thread_manage.h"
 #include "thread_sharing_data.h"
+#include "synchronizing_concurrent_operations.h"
 
 int main() {
     TICK();
@@ -55,8 +56,15 @@ int main() {
     thread_sharing_data::RAII_test();
     thread_sharing_data::call_once_test();
     thread_sharing_data::Connection_call_once_test();
-#endif      
     thread_sharing_data::Connection_concurrency_call_once_test();
+#endif
+
+#if 0//chapter4
+    sync_conc_opera::wait_for_flag();
+    sync_conc_opera::wait_for_condition_variable();
+#endif
+
+    sync_conc_opera::threadsafe_queue_test();
     return 0;
 }
 

@@ -29,6 +29,9 @@
 #include <deque>
 #include <stack>
 #include <map>
+#include <queue>
+#include <memory>
+#include <condition_variable>
 
 //+ user`s head file.
 #include "targetver.h"
