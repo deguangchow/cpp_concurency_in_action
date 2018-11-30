@@ -154,6 +154,62 @@ void data_preparation_safe_thread();
 void data_processing_safe_thread();
 void threadsafe_queue_test();
 
+//4.2 Waiting for one-off events with futures
+//4.2.1 Returning values from background tasks.
+//Listing 4.6 Using std::future to get the return value of an asynchronous task
+int find_the_answer_to_ltuae();
+void do_other_stuff();
+void future_async_test();
+
+//Listing 4.7 Passing arguments to a function with std::async
+struct X {
+    int foo(int i, std::string const &s) {
+        TICK();
+        return TEN * i;
+    }
+    std::string bar(std::string const &s) {
+        TICK();
+        return std::string("bar: ") + s;
+    }
+};
+struct Y {
+    double operator()(double d) {
+        TICK();
+        return TEN * d;
+    }
+};
+class move_only {
+public:
+    move_only() {}
+    move_only(move_only &&) {}
+    move_only(move_only const&) = delete;
+    move_only& operator=(move_only &&) {}
+    move_only& operator=(move_only const&) = delete;
+    void operator()() {
+        TICK();
+    }
+};
+void future_async_struct_test();
+
+//4.2.2 Associating a task with a future
+//Listing 4.8 Partial class definaition for a specialization of std::packaged_task<>
+#if 0//error: can`t be compiled correctly
+template<>
+class packaged_task<std::string(std::vector<char>*, int)> {
+public:
+    template<typename Callable>
+    explicit packaged_task(Callable &&f) {}
+    std::future<std::string> get_future() {
+        TICK();
+        return std::future<string>("");
+    }
+    void operator()(std::vector<char>*, int) {
+        TICK();
+    }
+};
+#endif
+
+
 
 
 }//namespace sync_conc_opera

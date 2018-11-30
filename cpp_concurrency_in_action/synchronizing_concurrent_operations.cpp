@@ -122,6 +122,54 @@ void threadsafe_queue_test() {
     t4.join();
 }
 
+//4.2 Waiting for one-off events with futures
+//4.2.1 Returning values from background tasks.
+//Listing 4.6 Using std::future to get the return value of an asynchronous task
+int find_the_answer_to_ltuae() {
+    TICK();
+    return 42;
+}
+void do_other_stuff() {
+    TICK();
+}
+void future_async_test() {
+    TICK();
+    std::future<int> the_answer = std::async(find_the_answer_to_ltuae);
+    do_other_stuff();
+    INFO("The answer is %d", the_answer.get());
+}
+
+//Listing 4.7 Passing arguments to a function with std::async
+void future_async_struct_test() {
+    TICK();
+    X x;
+    std::future<int> f1 = std::async(&X::foo, &x, 42, "hello"); //Calls p->foo(42, "hello") where p is &x
+    std::future<std::string> f2 = std::async(&X::bar, x, "goodbye");    //Calls tmpx.bar() where tmpx is a copy of x
+    INFO("f1=%d", f1.get());
+    INFO("f2=%s", f2.get().c_str());
+
+    Y y;
+    std::future<double> f3 = std::async(Y(), 3.141);    //Calls tmpy(3.141) where tmpy is move-constructed from Y()
+    std::future<double> f4 = std::async(std::ref(y), 2.718);    //Calls y(2.718)
+    INFO("f3=%f", f3.get());
+    INFO("f4=%f", f4.get());
+
+#if 0//strange usage: can`t be compiled correctly
+    X baz(X&);
+    std::async(baz, std::ref(x));   //Calls baz(x)
+#endif
+
+    std::future<void> f5 = std::async(move_only());
+    std::future<double> f6 = std::async(std::launch::async, Y(), 1.2);  //Run in new thread
+    INFO("f6=%f", f6.get());
+#if 0//strange usage: can`t be compiled correctly
+    std::future<X> f7 = std::async(std::launch::deferred, baz, std::ref(x));    //Run in wait() or get()
+    std::future<X> f8 = std::async(std::launch::deferred | std::launch::async, baz, std::ref(x));
+    std::future<X> f9 = std::async(baz, std::ref(x));   //Implementation chooses
+    f7.wait();  //Invoke deferred function
+#endif
+}
+
 }//namespace sync_conc_opera
 
 

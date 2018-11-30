@@ -62,9 +62,11 @@ int main() {
 #if 0//chapter4
     sync_conc_opera::wait_for_flag();
     sync_conc_opera::wait_for_condition_variable();
+    sync_conc_opera::threadsafe_queue_test();
+    sync_conc_opera::future_async_test();
 #endif
 
-    sync_conc_opera::threadsafe_queue_test();
+    sync_conc_opera::future_async_struct_test();
     return 0;
 }
 

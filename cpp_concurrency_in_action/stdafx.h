@@ -32,6 +32,7 @@
 #include <queue>
 #include <memory>
 #include <condition_variable>
+#include <future>
 
 //+ user`s head file.
 #include "targetver.h"
