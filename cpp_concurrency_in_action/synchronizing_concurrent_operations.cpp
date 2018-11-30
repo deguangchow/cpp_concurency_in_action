@@ -122,6 +122,6 @@ void threadsafe_queue_test() {
     t4.join();
 }
 
-}//namespace synchronizing_concurrent_operations
+}//namespace sync_conc_opera
 
 

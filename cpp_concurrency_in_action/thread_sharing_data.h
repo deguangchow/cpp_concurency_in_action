@@ -267,7 +267,6 @@ class X_EX {
 private:
     some_big_object<T> some_detail;
     std::mutex m;
-    
 public:
     explicit X_EX(some_big_object<T> const &sd) : some_detail(sd) {}
     friend void swap(X_EX<T> &lhs, X_EX<T> &rhs) {
@@ -292,9 +291,7 @@ void do_something();
 void process_data();
 
 //3.2.8 Locking at an appropriate granularity
-class some_class {
-
-};
+class some_class {};
 some_class get_next_data_chunk();
 typedef unsigned result_type;
 result_type process(some_class data);
@@ -314,7 +311,7 @@ private:
         return some_detail;
     }
 public:
-    Y(T sd) :some_detail(sd) {}
+    explicit Y(T sd) :some_detail(sd) {}
     friend bool operator==(Y<T> const &lhs, Y<T> const &rhs) {
         TICK();
         if (&lhs == &rhs) {
@@ -344,14 +341,10 @@ void once_flag_test();
 void call_once_test();
 
 //Listing 3.12 Threads-safe lazy initialization of a class member using std::call_once
-class data_packet {
-
-};
+class data_packet {};
 class connection_info {
 public:
-    connection_info() {
-
-    }
+    connection_info() {}
 };
 class connection_handle {
 public:
@@ -384,9 +377,7 @@ private:
         connection = conn_mgr.open(connection_details);
     }
 public:
-    Connection(connection_info const &connection_details_) : connection_details(connection_details_) {
-
-    }
+    explicit Connection(connection_info const &connection_details_) : connection_details(connection_details_) {}
     void send_data(data_packet const &data) {
         TICK();
         std::call_once(connection_init_flag, &Connection::open_connection, this);
@@ -402,9 +393,7 @@ public:
 void Connection_call_once_test();
 void Connection_concurrency_call_once_test();
 
-class my_class {
-
-};
+class my_class {};
 my_class& get_my_class_instance();
 
 //3.2.2 Protecting rarely updated data structures

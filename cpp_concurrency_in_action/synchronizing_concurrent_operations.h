@@ -16,9 +16,7 @@ void wait_for_flag();
 
 //4.1.1 Waiting for a condition with condition variables
 //Listing 4.1 Waiting for data to process with a std::condition_variable
-class data_chunk {
-
-};
+class data_chunk {};
 bool more_data_to_prepare();
 data_chunk prepare_data();
 void data_preparation_thread();
@@ -33,6 +31,7 @@ template<class T, class Container = std::deque<T>>
 class queue {
 private:
     Container data_queue;
+
 public:
     explicit queue(Container const&) {}
     explicit queue(Container && = Container()) {}
@@ -40,7 +39,6 @@ public:
     template<class Alloc> queue(Container const&, Alloc const &) {}
     template<class Alloc> queue(Container&&, Alloc const&) {}
     template<class Alloc> queue(queue &&, Alloc const&) {}
-    
     void swap(queue &q) {
         TICK();
         data_queue.swap(q);
@@ -96,9 +94,10 @@ private:
     mutable std::mutex mut; //The mutex must be mutable
     std::queue<T> data_queue;
     std::condition_variable data_cond;
+
 public:
-    threadsafe_queue() {}
-    threadsafe_queue(threadsafe_queue const &other) {
+    threadsafe_queue() : mut(), data_queue(), data_cond() {}
+    threadsafe_queue(threadsafe_queue const &other) : mut(), data_queue(), data_cond() {
         std::lock_guard<std::mutex> lk(other.mut);
         data_queue = other.data_queue;
     }
@@ -157,7 +156,7 @@ void threadsafe_queue_test();
 
 
 
-}//namespace synchronizing_concurrent_operations
+}//namespace sync_conc_opera
 
 #endif  //SYNCHRONIZING_CONCURRENT_OPERATIONS_H
 
