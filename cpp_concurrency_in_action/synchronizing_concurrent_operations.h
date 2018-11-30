@@ -209,7 +209,17 @@ public:
 };
 #endif
 
+//Listing 4.9 Running code on a GUI thread using std::packaged_task
 
+bool gui_shutdown_message_received();
+void get_and_process_gui_message();
+void gui_thread();
+template<typename Func>
+std::future<void> post_task_for_gui_thread(Func f);
+void packaged_task_test();
+
+//4.2.3 Making (std::)promises
+//Listing 4.10 Handling multiple connections from a single thread using promise
 
 
 }//namespace sync_conc_opera

@@ -170,6 +170,68 @@ void future_async_struct_test() {
 #endif
 }
 
+//Listing 4.9 Running code on a GUI thread using std::packaged_task
+std::deque<std::packaged_task<void()>> tasks;
+std::mutex mutex_tasks;
+std::condition_variable cond_tasks;
+bool gui_shutdown_message_received() {
+    TICK();
+    std::unique_lock<std::mutex> lk(mutex_tasks);
+    cond_tasks.wait(lk, [] {return !tasks.empty(); });
+    return false;
+}
+void get_and_process_gui_message() {
+    TICK();
+}
+void gui_thread() {
+    TICK();
+    while (!gui_shutdown_message_received()) {
+        get_and_process_gui_message();
+        std::packaged_task<void()> task;
+        {
+            std::lock_guard<std::mutex> lk(mutex_tasks);
+            if (tasks.empty()) {
+                continue;
+            }
+            task = std::move(tasks.front());
+            tasks.pop_front();
+        }
+        task();
+    }
+}
+template<typename Func>
+std::future<void> post_task_for_gui_thread(Func f) {
+    TICK();
+    std::packaged_task<void()> task(f);
+    std::future<void> res = task.get_future();
+    std::lock_guard<std::mutex> lk(mutex_tasks);
+    tasks.push_back(std::move(task));
+    cond_tasks.notify_one();
+    return res;
+}
+void do_some_task() {
+    TICK();
+}
+int do_other_task(int const &value) {
+    TICK();
+    return TEN * value;
+}
+void packaged_task_test() {
+    TICK();
+    std::thread gui_bg_thread(gui_thread);
+    gui_bg_thread.detach();
+
+    while (true) {
+        std::thread task_thread(post_task_for_gui_thread<void()>, do_some_task);
+        task_thread.detach();
+
+#if _DEBUG
+        unsigned const &THREAD_SLEEP_TIME_MS = 5 * HUNDRED;
+        std::this_thread::sleep_for(std::chrono::milliseconds(THREAD_SLEEP_TIME_MS));
+#endif
+    }
+}
+
 }//namespace sync_conc_opera
 
 

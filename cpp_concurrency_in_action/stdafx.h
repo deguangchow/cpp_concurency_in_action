@@ -33,6 +33,7 @@
 #include <memory>
 #include <condition_variable>
 #include <future>
+#include <utility>
 
 //+ user`s head file.
 #include "targetver.h"
