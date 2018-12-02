@@ -220,6 +220,50 @@ void packaged_task_test();
 
 //4.2.3 Making (std::)promises
 //Listing 4.10 Handling multiple connections from a single thread using promise
+class payload_type {};
+struct data_packet {
+    unsigned id;
+    payload_type payload;
+};
+struct outgoing_packet {
+    unsigned id;
+    payload_type payload;
+    std::promise<bool> promise;
+};
+class Connection {
+public:
+    Connection() {}
+    ~Connection() {}
+    bool has_incoming_data() {
+        TICK();
+        return true;
+    }
+    data_packet incoming() {
+        TICK();
+        return data_packet();
+    }
+    std::promise<payload_type> get_promise(unsigned const &id) {
+        TICK();
+        return std::promise<payload_type>();
+    }
+    bool has_outgoing_data() {
+        TICK();
+        return true;
+    }
+    outgoing_packet top_of_outgoing_queue() {
+        TICK();
+        return outgoing_packet();
+    }
+    void send(payload_type const &payload) {
+        TICK();
+    }
+};
+typedef std::shared_ptr<Connection> Connection_ptr;
+typedef std::set<Connection_ptr> SetConnection;
+typedef SetConnection::iterator Connection_iterator;
+bool done(SetConnection const &connections);
+void process_connections(SetConnection &connections);
+void process_connections_test();
 
 
 }//namespace sync_conc_opera

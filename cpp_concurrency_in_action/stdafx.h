@@ -34,6 +34,7 @@
 #include <condition_variable>
 #include <future>
 #include <utility>
+#include <set>
 
 //+ user`s head file.
 #include "targetver.h"

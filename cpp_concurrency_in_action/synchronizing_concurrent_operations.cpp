@@ -232,6 +232,39 @@ void packaged_task_test() {
     }
 }
 
+//4.2.3 Making (std::)promises
+//Listing 4.10 Handling multiple connections from a single thread using promise
+bool done(SetConnection const &connections) {
+    TICK();
+    return false;
+}
+void process_connections(SetConnection &connections) {
+    TICK();
+    while (!done(connections)) {
+        for (Connection_iterator &pos = connections.cbegin(); pos != connections.cend(); ++pos) {
+            Connection_ptr const& conn = *pos;
+            if (conn->has_incoming_data()) {
+                data_packet data = conn->incoming();
+                std::promise<payload_type>& p = conn->get_promise(data.id);
+                p.set_value(data.payload);
+            }
+            if (conn->has_outgoing_data()) {
+                outgoing_packet data = conn->top_of_outgoing_queue();
+                conn->send(data.payload);
+                data.promise.set_value(true);
+            }
+        }
+    }
+}
+void process_connections_test() {
+    TICK();
+    SetConnection connections;
+    connections.insert(std::make_shared<Connection>());
+    connections.insert(std::make_shared<Connection>());
+    connections.insert(std::make_shared<Connection>());
+    process_connections(connections);
+}
+
 }//namespace sync_conc_opera
 
 
