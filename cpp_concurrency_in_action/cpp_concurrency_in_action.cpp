@@ -68,9 +68,12 @@ int main() {
     sync_conc_opera::packaged_task_test();
     sync_conc_opera::process_connections_test();
     sync_conc_opera::future_exception_test();
+    sync_conc_opera::promise_exception_test();
+    sync_conc_opera::durations_test();
+    sync_conc_opera::time_points_test();
 #endif
 
-    sync_conc_opera::promise_exception_test();
+    sync_conc_opera::condition_variable_timeout_test();
 
     return 0;
 }

@@ -273,6 +273,18 @@ double calcuate_value();
 void promise_exception();
 void promise_exception_test();
 
+//4.3 Waiting with a time limit
+//4.3.1 Clocks
+//4.3.2 Durations
+int some_task();
+void do_something_with(int const &val);
+void durations_test();
+//4.3.3 Time points
+void do_something();
+void time_points_test();
+//Listing 4.11 Waiting for a condition variable with a timeout
+bool wait_until_loop();
+void condition_variable_timeout_test();
 
 }//namespace sync_conc_opera
 

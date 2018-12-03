@@ -317,6 +317,86 @@ void promise_exception_test() {
     assert(sf.valid());
 }
 
+//4.3 Waiting with a time limit
+//4.3.1 Clocks
+//3.3.2 Durations
+int some_task() {
+    TICK();
+    return 42;
+}
+void do_something_with(int const &val) {
+    TICK();
+}
+void durations_test() {
+    TICK();
+    std::chrono::milliseconds ms(54802);
+    std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(ms);
+    INFO("ms=%ld, s=ld", ms.count(), s.count());    //error: The print of s is 0
+
+    std::chrono::seconds s1(54802);
+    INFO("s1=%ld", s1.count()); //The print of s1 is 54802
+
+    std::future<int> f = std::async(some_task);
+    if (f.wait_for(std::chrono::milliseconds(35)) == std::future_status::ready) {
+        int const &res = f.get();
+        INFO("f=%d", res);
+        do_something_with(res);
+    }
+}
+//4.3.3 Time points
+void do_something() {
+    TICK();
+    unsigned const &THREAD_SLEEP_TIME_MS = 5 * HUNDRED;
+    std::this_thread::sleep_for(std::chrono::milliseconds(THREAD_SLEEP_TIME_MS));
+}
+
+void time_points_test() {
+    TICK();
+    auto start = std::chrono::high_resolution_clock::now();
+    do_something();
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto tick = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+    INFO("do_something() took %ld milliseconds", tick);
+}
+
+//Listing 4.11 Waiting for a condition variable with a timeout
+std::condition_variable cv;
+bool done_wait = false;
+std::mutex mutex_wait;
+unsigned const &CV_WAIT_TIME_MS = 5 * HUNDRED;
+bool wait_until_loop() {
+    TICK();
+    while (!done_wait) {
+        auto const timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(CV_WAIT_TIME_MS);
+        std::unique_lock<std::mutex> lk(mutex_wait);
+        if (cv.wait_until(lk, timeout) == std::cv_status::timeout) {
+            break;
+        }
+    }
+    return done_wait;
+}
+bool wait_for_loop() {
+    TICK();
+    while (!done_wait) {
+        std::unique_lock<std::mutex> lk(mutex_wait);
+        if (cv.wait_for(lk, std::chrono::milliseconds(CV_WAIT_TIME_MS)) == std::cv_status::timeout) {
+            break;
+        }
+    }
+    return done_wait;
+}
+void condition_variable_timeout_test() {
+    TICK();
+    done_wait = false;
+    wait_until_loop();
+
+    done_wait = false;
+    wait_for_loop();
+
+    cv.notify_one();
+    cv.notify_one();
+}
+
 }//namespace sync_conc_opera
 
 
