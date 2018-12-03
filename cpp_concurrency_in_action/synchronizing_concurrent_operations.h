@@ -315,6 +315,33 @@ std::list<T> sequential_quick_sort(std::list<T> input) {
 
 void sequential_quick_sort_test();
 
+//Listing 4.13 Parallel Quicksort using futures
+template<typename T>
+std::list<T> parallel_quick_sort(std::list<T> input) {
+    TICK();
+    if (input.empty()) {
+        return input;
+    }
+
+    std::list<T> result;
+    result.splice(result.begin(), input, input.begin());
+    T const &pivot = *result.begin();
+    auto divide_point = std::partition(input.begin(), input.end(),
+        [&pivot](T const &t) {return t < pivot; });
+
+    std::list<T> lower_part;
+    lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
+
+    std::future<std::list<T>> new_lower(std::async(&parallel_quick_sort<T>, std::move(lower_part)));
+    auto new_higher(std::move(parallel_quick_sort(input)));
+
+    result.splice(result.end(), new_higher);
+    result.splice(result.begin(), new_lower.get());
+    return result;
+}
+
+void parallel_quick_sort_test();
+
 }//namespace sync_conc_opera
 
 #endif  //SYNCHRONIZING_CONCURRENT_OPERATIONS_H

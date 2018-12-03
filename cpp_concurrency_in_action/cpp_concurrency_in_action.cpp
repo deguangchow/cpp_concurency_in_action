@@ -72,9 +72,11 @@ int main() {
     sync_conc_opera::durations_test();
     sync_conc_opera::time_points_test();
     sync_conc_opera::condition_variable_timeout_test();
+    sync_conc_opera::sequential_quick_sort_test();
 #endif
 
-    sync_conc_opera::sequential_quick_sort_test();
+    sync_conc_opera::parallel_quick_sort_test();
+
     return 0;
 }
 
