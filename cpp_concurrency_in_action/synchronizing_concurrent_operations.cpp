@@ -397,6 +397,15 @@ void condition_variable_timeout_test() {
     cv.notify_one();
 }
 
+void sequential_quick_sort_test() {
+    TICK();
+    std::list<int> input = { 4, 2, 6, 3, 2, 5, 10, 0, 2, 7, 9, 3, 1, 10, 8 };
+    TV_LIST_INT(input);
+
+    std::list<int> result = sequential_quick_sort(input);
+    TV_LIST_INT(result);
+}
+
 }//namespace sync_conc_opera
 
 

@@ -44,6 +44,21 @@ public:
     static void info(char* format, ...);
     static void logfile(char* format, ...);
     static void progress(char* format, ...);
+    
+    template<typename T>
+    static void TV(T input) {
+        for (auto &pos = input.cbegin(); pos != input.cend(); ++pos) {
+            std::cout << *pos << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    template<typename T>
+    static void TV2(T input) {
+        for (auto &pos = input.cbegin(); pos != input.cend(); ++pos) {
+            std::cout << pos->first << "=" << pos->second << std::endl;
+        }
+    }
 
     //Transfer UNIX time to Beijing-Time string.
     // e.g. 2018-08-07 15:24:45
@@ -75,6 +90,8 @@ public:
 #define INFO(_F_, ...)Tick::info(_F_, __VA_ARGS__)
 #define BAR(_F_, ...)Tick::progress(_F_, __VA_ARGS__)
 #define ST(_ID)
+#define TV_LIST_INT(X)Tick::TV<std::list<int>>(X);
+#define TV_MAP_INT(X)Tick::TV2<std::map<int, int>>(X);
 #else
 #define TICK()
 #define ERR(_F_, ...)
@@ -83,6 +100,8 @@ public:
 #define INFO(_F_, ...)
 #define BAR(_F_, ...)
 #define ST(_ID)Tick FS_DO_JOIN(tick_, __COUNTER__)(_ID)
+#define TV_LIST_INT(X)
+#define TV_MAP_INT(X)
 #endif
 
 #endif  //CONSOLE_LOG_H

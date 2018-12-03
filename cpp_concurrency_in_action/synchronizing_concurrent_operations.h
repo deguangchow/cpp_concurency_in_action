@@ -6,6 +6,7 @@
 ///    \author   deguangchow
 ///    \version  1.0
 ///    \2018/11/29
+#pragma once
 #ifndef SYNCHRONIZING_CONCURRENT_OPERATIONS_H
 #define SYNCHRONIZING_CONCURRENT_OPERATIONS_H
 
@@ -292,7 +293,7 @@ void condition_variable_timeout_test();
 template<typename T>
 std::list<T> sequential_quick_sort(std::list<T> input) {
     TICK();
-    if (!input.empty()) {
+    if (input.empty()) {
         return input;
     }
     std::list<T> result;
@@ -308,10 +309,11 @@ std::list<T> sequential_quick_sort(std::list<T> input) {
     auto new_lower(sequential_quick_sort(std::move(lower_part)));
     auto new_higher(sequential_quick_sort(std::move(input)));
     result.splice(result.end(), new_higher);
-    result.splice(result.end(), new_lower);
-
+    result.splice(result.begin(), new_lower);
     return result;
 }
+
+void sequential_quick_sort_test();
 
 }//namespace sync_conc_opera
 
