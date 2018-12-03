@@ -286,6 +286,33 @@ void time_points_test();
 bool wait_until_loop();
 void condition_variable_timeout_test();
 
+//4.4 Using synchronization of operations to simplify code
+//4.4.1 Funcional programming with futures
+//Listing 4.12 A sequential implementation of Quicksort
+template<typename T>
+std::list<T> sequential_quick_sort(std::list<T> input) {
+    TICK();
+    if (!input.empty()) {
+        return input;
+    }
+    std::list<T> result;
+    result.splice(result.begin(), input, input.begin());
+    T const &pivot = *result.begin();
+
+    auto divide_point = std::partition(input.begin(), input.end(),
+        [&pivot](T const &t) {return t < pivot; });
+
+    std::list<T> lower_part;
+    lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
+
+    auto new_lower(sequential_quick_sort(std::move(lower_part)));
+    auto new_higher(sequential_quick_sort(std::move(input)));
+    result.splice(result.end(), new_higher);
+    result.splice(result.end(), new_lower);
+
+    return result;
+}
+
 }//namespace sync_conc_opera
 
 #endif  //SYNCHRONIZING_CONCURRENT_OPERATIONS_H
