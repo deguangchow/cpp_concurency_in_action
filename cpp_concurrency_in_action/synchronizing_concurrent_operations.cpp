@@ -265,6 +265,58 @@ void process_connections_test() {
     process_connections(connections);
 }
 
+double square_root(double x) {
+    TICK();
+    if (x < 0) {
+        throw std::out_of_range("x<0");
+    }
+    return sqrt(x);
+}
+
+void future_exception_test() {
+    TICK();
+    try {
+        double d1 = 256;
+        std::future<double> f1 = std::async(square_root, d1);
+        INFO("async square_root(%f)=%f", d1, f1.get());
+
+        double d2 = -1;
+        std::future<double> f2 = std::async(square_root, d2);
+        INFO("async square_root(%f)=%f", d2, f2.get());
+    } catch (std::exception e) {
+        INFO("catch exception: %s", e.what());
+    }
+}
+
+double calcuate_value() {
+    TICK();
+    throw std::out_of_range("calcuate_value exception.");
+    return 3.141;
+}
+std::promise<double> some_promise;
+void promise_exception() {
+    TICK();
+    try {
+        some_promise.set_value(calcuate_value());
+    }
+    catch (std::exception e) {
+        INFO("catch exception: %s", e.what());
+        some_promise.set_exception(std::current_exception());
+    }
+}
+void promise_exception_test() {
+    TICK();
+    promise_exception();
+
+    std::future<double> f = some_promise.get_future();
+    assert(f.valid());
+    std::shared_future<double> sf(std::move(f));
+#if 0
+    assert(!f.valid());
+#endif
+    assert(sf.valid());
+}
+
 }//namespace sync_conc_opera
 
 

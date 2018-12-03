@@ -265,6 +265,14 @@ bool done(SetConnection const &connections);
 void process_connections(SetConnection &connections);
 void process_connections_test();
 
+//4.2.4 Saving an exception for the future
+double square_root(double x);
+void future_exception_test();
+
+double calcuate_value();
+void promise_exception();
+void promise_exception_test();
+
 
 }//namespace sync_conc_opera
 

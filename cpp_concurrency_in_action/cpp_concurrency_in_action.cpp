@@ -66,9 +66,12 @@ int main() {
     sync_conc_opera::future_async_test();
     sync_conc_opera::future_async_struct_test();
     sync_conc_opera::packaged_task_test();
+    sync_conc_opera::process_connections_test();
+    sync_conc_opera::future_exception_test();
 #endif
 
-    sync_conc_opera::process_connections_test();
+    sync_conc_opera::promise_exception_test();
+
     return 0;
 }
 
