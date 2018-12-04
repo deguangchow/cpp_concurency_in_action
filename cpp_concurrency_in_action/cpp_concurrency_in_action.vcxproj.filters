@@ -28,6 +28,9 @@
     <Filter Include="chapter4">
       <UniqueIdentifier>{aede19cd-4651-4490-a42a-3fc4d44b3ba2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter5">
+      <UniqueIdentifier>{49157919-aab1-4c8a-8208-b5fdcf63e376}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -57,6 +60,9 @@
     <ClInclude Include="synchronizing_concurrent_operations.h">
       <Filter>chapter4</Filter>
     </ClInclude>
+    <ClInclude Include="atomic_memery_model_operations.h">
+      <Filter>chapter5</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -79,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="synchronizing_concurrent_operations.cpp">
       <Filter>chapter4</Filter>
+    </ClCompile>
+    <ClCompile Include="atomic_memery_model_operations.cpp">
+      <Filter>chapter5</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

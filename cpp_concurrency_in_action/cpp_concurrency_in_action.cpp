@@ -13,6 +13,7 @@
 #include "thread_manage.h"
 #include "thread_sharing_data.h"
 #include "synchronizing_concurrent_operations.h"
+#include "atomic_memery_model_operations.h"
 
 int main() {
     TICK();
@@ -74,11 +75,14 @@ int main() {
     sync_conc_opera::condition_variable_timeout_test();
     sync_conc_opera::sequential_quick_sort_test();
     sync_conc_opera::parallel_quick_sort_test();
+    sync_conc_opera::spawn_task_test();
 #endif
 
-    sync_conc_opera::spawn_task_test();
+#if 0//chapter5
 
+#endif
 
+    atomic_type::atomic_flag_test();
     return 0;
 }
 

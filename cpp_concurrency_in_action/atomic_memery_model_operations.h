@@ -1,0 +1,29 @@
+///    Copyright (C) 2018 DG.C, DGCHOW, deguangchow
+///        deguangchow@qq.com
+///
+///    \brief    chapter5: The C++ memory model and operations on atomic types
+///
+///    \author   deguangchow
+///    \version  1.0
+///    \2018/12/04
+#pragma once
+#ifndef ATOMIC_MEMORY_MODEL_OPERATIONS_H
+#define ATOMIC_MEMORY_MODEL_OPERATIONS_H
+
+namespace atomic_type {
+
+//5.1 Memory model basics
+//5.1.1 Objects and memory locations
+//5.1.2 Objects, memory locations, and concurrency
+//5.1.3 Modification orders
+
+//5.2 Atomic operations and types in C++
+//5.2.1 The standard atomic types
+//5.2.2 Operations on std::atomic_flag
+void atomic_flag_test();
+
+
+
+}//namespace atomic_type
+
+#endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H

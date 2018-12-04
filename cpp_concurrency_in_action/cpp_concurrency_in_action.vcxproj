@@ -145,6 +145,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="atomic_memery_model_operations.h" />
     <ClInclude Include="common_def.h" />
     <ClInclude Include="console_log.h" />
     <ClInclude Include="stdafx.h" />
@@ -155,6 +156,7 @@
     <ClInclude Include="thread_test.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="atomic_memery_model_operations.cpp" />
     <ClCompile Include="cpp_concurrency_in_action.cpp" />
     <ClCompile Include="console_log.cpp" />
     <ClCompile Include="stdafx.cpp">
