@@ -46,4 +46,24 @@ void spinlock_mutex_test() {
     t2.join();
 }
 
+//5.2.3 Operations on std::atomic<bool>
+void atomic_bool_test() {
+    TICK();
+    std::atomic<bool> b;
+    bool x = b.load(std::memory_order_acquire);
+    INFO("x=%s", x ? "true" : "false");
+
+    b.store(false);
+    x = b.load(std::memory_order_acquire);
+    INFO("x=%s", x ? "true" : "false");
+
+    b.store(true);
+    x = b.load(std::memory_order_acquire);
+    INFO("x=%s", x ? "true" : "false");
+
+
+    x = b.exchange(false, std::memory_order_acq_rel);
+    INFO("x=%s", x ? "true" : "false");
+}
+
 }//atomic_type

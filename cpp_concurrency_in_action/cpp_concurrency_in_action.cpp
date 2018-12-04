@@ -80,9 +80,11 @@ int main() {
 
 #if 0//chapter5
     atomic_type::atomic_flag_test();
+    atomic_type::spinlock_mutex_test();
 #endif
 
-    atomic_type::spinlock_mutex_test();
+    atomic_type::atomic_bool_test();
+
     return 0;
 }
 

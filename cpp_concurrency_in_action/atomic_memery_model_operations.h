@@ -29,14 +29,17 @@ public:
     spinlock_mutex() {}
     void lock() {
         TICK();
-        while (flag.test_and_set(std::memory_order_acquire));
+        while (flag.test_and_set(std::memory_order_acquire));//Atomically set flag to true and return previous value
     }
     void unlock() {
         TICK();
-        flag.clear(std::memory_order_release);
+        flag.clear(std::memory_order_release);//Atomically clear flag to false
     }
 };
 void spinlock_mutex_test();
+
+//5.2.3 Operations on std::atomic<bool>
+void atomic_bool_test();
 
 
 }//namespace atomic_type
