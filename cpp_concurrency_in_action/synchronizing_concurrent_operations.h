@@ -342,6 +342,36 @@ std::list<T> parallel_quick_sort(std::list<T> input) {
 
 void parallel_quick_sort_test();
 
+//Listing 4.14 A sample implementation of spawn_task
+#if 0//original sample
+template<typename F, typename A>
+std::future<typename std::result_of<F(A&&)>::type> spawn_task(F &&f, A &&a) {
+    TICK();
+    typedef std::result_of<F(A&&)>::type result_type;
+    std::packaged_task<result_type(A&&)> task(std::move(f));
+    std::future<result_type> res(task.get_future());
+    std::thread t(std::move(task), std::move(a));
+    t.detach();
+    return res;
+}
+#else//extended sample
+template<typename F, typename...Args>
+auto spawn_task(F &&f, Args &&...args)->std::future<typename std::result_of<F(Args...)>::type> {
+    TICK();
+    using result_type = typename std::result_of<F(Args...)>::type;
+    std::packaged_task<result_type(Args...)> task(std::move(f));
+    std::future<result_type> res(task.get_future());
+    std::thread t(std::move(task), std::forward<Args>(args)...);
+    t.detach();
+    return res;
+}
+#endif
+double do_multiplus_work(double const &val);
+int do_mod(int const &val);
+int do_1();
+void spawn_task_test();
+
+
 }//namespace sync_conc_opera
 
 #endif  //SYNCHRONIZING_CONCURRENT_OPERATIONS_H

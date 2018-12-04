@@ -44,7 +44,7 @@ public:
     static void info(char* format, ...);
     static void logfile(char* format, ...);
     static void progress(char* format, ...);
-    
+
     template<typename T>
     static void TV(T input) {
         for (auto &pos = input.cbegin(); pos != input.cend(); ++pos) {

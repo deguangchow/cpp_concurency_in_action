@@ -400,7 +400,7 @@ void condition_variable_timeout_test() {
 //4.4 Using synchronization of operations to simplify code
 //4.4.1 Funcional programming with futures
 //Listing 4.12 A sequential implementation of Quicksort
-const static std::list<int> input = {
+const std::list<int> input = {
     4, 2, 6, 3, 2, 5, 10, 0, 2, 7, 9, 3, 1, 10, 8,
     4, 2, 6, 3, 2, 5, 10, 0, 2, 7, 9, 3, 1, 10, 8,
     4, 2, 6, 3, 2, 5, 10, 0, 2, 7, 9, 3, 1, 10, 8,
@@ -427,6 +427,58 @@ void parallel_quick_sort_test() {
 
     std::list<int> result = parallel_quick_sort(input);
     TV_LIST_INT(result);
+}
+
+//Listing 4.14 A sample implementation of spawn_task
+double do_multiplus_work(double const &val) {
+    TICK();
+    return val * PI;
+}
+int do_mod(int const &val) {
+    TICK();
+    return val % 2;
+}
+int do_1() {
+    TICK();
+    return 1;
+}
+void spawn_task_test() {
+    TICK();
+#if 0
+    typedef std::function<double(double const &)> F1;
+    std::future<double> res1 = spawn_task<F1, double>(&do_multiplus_work, 1.5);
+    INFO("spawn_task<do_multiplus_work> res1=%f", res1.get());
+
+    typedef std::function<int(int)> F2;
+    std::future<int> res2 = spawn_task<F2, int>(&do_mod, 19);
+    INFO("spawn_task<do_mod> res2=%d", res2.get());
+
+    typedef std::function<int()> F3;
+    std::future<int> res3 = spawn_task<F3>(&do_1);
+    INFO("spawn_task<do_1> res3=%d", res3.get());
+#else
+    double const &r = 1.5;
+    std::future<double> res1 = spawn_task(&do_multiplus_work, r);
+    INFO("spawn_task<do_multiplus_work> res1=%f", res1.get());
+
+    int const &a = 19;
+    std::future<int> res2 = spawn_task(&do_mod, a);
+    INFO("spawn_task<do_mod> res2=%d", res2.get());
+
+    std::future<int> res3 = spawn_task(&do_1);
+    INFO("spawn_task<do_1> res3=%d", res3.get());
+#endif
+
+    std::vector<std::future<unsigned>> res;
+    for (unsigned i = 0; i < 8; ++i) {
+        res.emplace_back(spawn_task([i] {
+            TICK();
+            return i*i;
+        }));
+    }
+    for (auto &&pos : res) {
+        INFO("%d", pos.get());
+    }
 }
 
 }//namespace sync_conc_opera

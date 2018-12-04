@@ -32,5 +32,6 @@ static const unsigned THREAD_NUM_32                 = 32;           //线程数�
 static const unsigned THREAD_NUM_64                 = 64;           //线程数：64
 static const unsigned THREAD_NUM_128                = 128;          //线程数：128
 
+static const double PI                              = 3.1415926;    //π
 #endif  //COMMON_DEF_H
 
