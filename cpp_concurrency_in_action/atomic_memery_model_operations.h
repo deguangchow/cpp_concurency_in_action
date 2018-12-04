@@ -22,6 +22,21 @@ namespace atomic_type {
 //5.2.2 Operations on std::atomic_flag
 void atomic_flag_test();
 
+//Listing 5.1 Implementation of a spinlock mutex using std::atomic_flag
+class spinlock_mutex {
+    std::atomic_flag flag = ATOMIC_FLAG_INIT;
+public:
+    spinlock_mutex() {}
+    void lock() {
+        TICK();
+        while (flag.test_and_set(std::memory_order_acquire));
+    }
+    void unlock() {
+        TICK();
+        flag.clear(std::memory_order_release);
+    }
+};
+void spinlock_mutex_test();
 
 
 }//namespace atomic_type

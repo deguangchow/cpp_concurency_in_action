@@ -79,10 +79,10 @@ int main() {
 #endif
 
 #if 0//chapter5
-
+    atomic_type::atomic_flag_test();
 #endif
 
-    atomic_type::atomic_flag_test();
+    atomic_type::spinlock_mutex_test();
     return 0;
 }
 

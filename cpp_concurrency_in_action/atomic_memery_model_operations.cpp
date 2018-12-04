@@ -22,4 +22,28 @@ void atomic_flag_test() {
     INFO("x=%s", x ? "true" : "false");
 }
 
+//Listing 5.1 Implementation of a spinlock mutex using std::atomic_flag
+spinlock_mutex s_mutex;
+void task1() {
+    TICK();
+    while (true) {
+        std::unique_lock<spinlock_mutex> lk(s_mutex);
+        std::cout << "task1" << std::endl << "----------------------------------------------------" << std::endl;
+    }
+}
+void task2() {
+    TICK();
+    while (true) {
+        std::unique_lock<spinlock_mutex> lk(s_mutex);
+        std::cout << "task2" << std::endl << "++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    }
+}
+void spinlock_mutex_test() {
+    TICK();
+    std::thread t1(task1);
+    std::thread t2(task2);
+    t1.join();
+    t2.join();
+}
+
 }//atomic_type
