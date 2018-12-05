@@ -43,6 +43,9 @@ void spinlock_mutex_test();
 //5.2.3 Operations on std::atomic<bool>
 void atomic_bool_test();
 
+void get_atomic_bool();
+void compare_exchange_weak_test();
+
 
 }//namespace atomic_type
 

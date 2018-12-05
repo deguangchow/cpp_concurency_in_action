@@ -66,5 +66,33 @@ void atomic_bool_test() {
     INFO("x=%s", x ? "true" : "false");
 }
 
+bool expected = false;
+std::atomic<bool> b;
+void get_atomic_bool() {
+    TICK();
+    while (bool x = !b.load(std::memory_order_acquire)) {
+        INFO("get_atomic_bool x=%s", !x ? "true" : "false");
+#if 0
+        const unsigned &THREAD_SLEEP_TIME_MS = ONE;
+        std::this_thread::sleep_for(std::chrono::milliseconds(THREAD_SLEEP_TIME_MS));
+#endif
+    }
+}
+void compare_exchange_weak_bool() {
+    TICK();
+    while (!b.compare_exchange_weak(expected, true) && !expected) {
+        INFO("compare_exchange_weak_bool while");
+    }
+    bool x = b.load(std::memory_order_acquire);
+    INFO("compare_exchange_weak_bool x=%s", x ? "true" : "false");
+}
+void compare_exchange_weak_test() {
+    TICK();
+    std::thread t1(get_atomic_bool);
+    std::thread t2(compare_exchange_weak_bool);
+    t1.join();
+    t2.join();
+}
+
 }//namespace atomic_type
 
