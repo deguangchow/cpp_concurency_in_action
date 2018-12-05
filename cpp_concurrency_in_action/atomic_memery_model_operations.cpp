@@ -66,4 +66,5 @@ void atomic_bool_test() {
     INFO("x=%s", x ? "true" : "false");
 }
 
-}//atomic_type
+}//namespace atomic_type
+

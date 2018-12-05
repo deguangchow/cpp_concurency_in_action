@@ -375,88 +375,88 @@ void spawn_task_test();
 //Listing 4.15 A simple implementation of an ATM logic class
 #if 0
 namespace messaging {
-    class close_queue {
-    };
+class close_queue {
+};
 
-    struct card_inserted {
-        std::string account;
-    };
+struct card_inserted {
+    std::string account;
+};
+template<typename T>
+class handle {
+public:
+    typedef std::function<void(T const &)> Func;
+    void operator()(Func) {
+        TICK();
+    }
+};
+class receiver {
+public:
     template<typename T>
-    class handle {
-    public:
-        typedef std::function<void(T const &)> Func;
-        void operator()(Func) {
-            TICK();
-        }
-    };
-    class receiver {
-    public:
-        template<typename T>
-        handle<T> wait() {
-            TICK();
-        }
-    };
-    class sender {
-    public:
-        void send(int const &) {
-            TICK();
-        }
+    handle<T> wait() {
+        TICK();
+    }
+};
+class sender {
+public:
+    void send(int const &) {
+        TICK();
+    }
+};
+class digit_pressed {
+public:
+    unsigned digit;
+};
+class atm {
+    messaging::receiver incoming;
+    messaging::sender bank;
+    messaging::sender interface_hardware;
+    void(atm::*state)();
 
-    };
-    class digit_pressed {
-    public:
-        unsigned digit;
-    };
-    class atm {
-        messaging::receiver incoming;
-        messaging::sender bank;
-        messaging::sender interface_hardware;
-        void(atm::*state)();
-
-        std::string account;
-        std::string pin;
-        int display_enter_card() {
-            TICK();
-            return 0;
-        }
-        void waiting_for_card() {
-            TICK();
+    std::string account;
+    std::string pin;
+    int display_enter_card() {
+        TICK();
+        return 0;
+    }
+    void waiting_for_card() {
+        TICK();
+        interface_hardware.send(display_enter_card());
+        incoming.wait().handle<card_inserted>([&](card_inserted const &msg) {
+            account = msg.account;
+            pin = "";
             interface_hardware.send(display_enter_card());
-            incoming.wait().handle<card_inserted>([&](card_inserted const &msg) {
-                account = msg.account;
-                pin = "";
-                interface_hardware.send(display_enter_card());
-                state = &atm::getting_pin;
-            });
-        }
-        void getting_pin() {
-            TICK();
-            incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
-                unsigned const pin_length = 4;
-                pin += msg.digit;
-                if (pin.length() == pin_length) {
-                    bank.send(verify_pin(account, pin, incoming));
-                }
-            });
-        }
-        int verify_pin(std::string const&, std::string const&, messaging::receiver const &) {
-            TICK();
-            return 0;
-        }
-    public:
-        void run() {
-            TICK();
-            state = &atm::waiting_for_card;
-            try {
-                for (;;) {
-                    (this->*state)();
-                }
+            state = &atm::getting_pin;
+        });
+    }
+    void getting_pin() {
+        TICK();
+        incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
+            unsigned const pin_length = 4;
+            pin += msg.digit;
+            if (pin.length() == pin_length) {
+                bank.send(verify_pin(account, pin, incoming));
             }
-            catch (messaging::close_queue const&) {
+        });
+    }
+    int verify_pin(std::string const&, std::string const&, messaging::receiver const &) {
+        TICK();
+        return 0;
+    }
+
+public:
+    void run() {
+        TICK();
+        state = &atm::waiting_for_card;
+        try {
+            for (;;) {
+                (this->*state)();
             }
         }
-    };
-}//messaging
+        catch (messaging::close_queue const&) {
+        }
+    }
+};
+}//namespace messaging
 #endif
 
 }//namespace sync_conc_opera

@@ -29,7 +29,9 @@ public:
     spinlock_mutex() {}
     void lock() {
         TICK();
-        while (flag.test_and_set(std::memory_order_acquire));//Atomically set flag to true and return previous value
+        //Atomically set flag to true and return previous value
+        while (flag.test_and_set(std::memory_order_acquire)) {
+        }
     }
     void unlock() {
         TICK();
