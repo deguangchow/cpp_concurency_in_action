@@ -45,7 +45,7 @@ void atomic_bool_test();
 
 void get_atomic_bool();
 void compare_exchange_weak_test();
-
+void compare_exchange_weak_memory_order_test();
 
 }//namespace atomic_type
 

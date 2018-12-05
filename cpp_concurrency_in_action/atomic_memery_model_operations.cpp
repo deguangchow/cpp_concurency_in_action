@@ -93,6 +93,24 @@ void compare_exchange_weak_test() {
     t1.join();
     t2.join();
 }
+void compare_exchange_weak_memory_order_test() {
+    TICK();
+
+    std::atomic<bool> b;
+    bool expected;
+    bool x;
+#if 0//running time error: invalid memory_order(_Order2)
+    b.compare_exchange_weak(expected, true, std::memory_order_acq_rel, std::memory_order_release);
+#else
+    b.compare_exchange_weak(expected, true, std::memory_order_acq_rel, std::memory_order_relaxed);
+#endif
+    x = b.load(std::memory_order_acquire);
+    INFO("compare_exchange_weak_bool() x=%s", x ? "true" : "false");
+
+    b.compare_exchange_weak(expected, true, std::memory_order_acq_rel);
+    x = b.load(std::memory_order_acquire);
+    INFO("compare_exchange_weak_bool x=%s", x ? "true" : "false");
+}
 
 }//namespace atomic_type
 
