@@ -40,6 +40,7 @@
 #include "targetver.h"
 #include "common_def.h"
 #include "console_log.h"
+#include "common_fun.h"
 
 
 #endif  //STDAFX_H

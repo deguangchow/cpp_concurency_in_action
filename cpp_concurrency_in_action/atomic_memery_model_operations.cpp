@@ -187,5 +187,29 @@ void atomic_load_store_test() {
 #endif
 }
 
+//5.3 Synchronizing operations and enforcing ordering
+//Listing 5.2 Reading and writing variables from different threads
+std::vector<int> data;
+std::atomic<bool> data_ready(false);
+void reader_thread() {
+    TICK();
+    while (!data_ready.load()) {
+        common_fun::sleep(ONE);
+    }
+    INFO("The answer=%d", data[0]);
+}
+void writer_thread() {
+    TICK();
+    data.push_back(42);
+    data_ready = true;
+}
+void atomic_sync_from_thread_test() {
+    TICK();
+    std::thread th_read(reader_thread);
+    std::thread th_writer(writer_thread);
+    th_read.join();
+    th_writer.join();
+}
+
 }//namespace atomic_type
 

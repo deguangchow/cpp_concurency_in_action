@@ -60,6 +60,12 @@ void process_global_data();
 void update_global_data();
 void atomic_load_store_test();
 
+//5.3 Synchronizing operations and enforcing ordering
+//Listing 5.2 Reading and writing variables from different threads
+void reader_thread();
+void writer_thread();
+void atomic_sync_from_thread_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H

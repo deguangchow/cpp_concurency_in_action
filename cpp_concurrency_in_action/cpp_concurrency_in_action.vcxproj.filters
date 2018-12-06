@@ -63,6 +63,9 @@
     <ClInclude Include="atomic_memery_model_operations.h">
       <Filter>chapter5</Filter>
     </ClInclude>
+    <ClInclude Include="common_fun.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -88,6 +91,9 @@
     </ClCompile>
     <ClCompile Include="atomic_memery_model_operations.cpp">
       <Filter>chapter5</Filter>
+    </ClCompile>
+    <ClCompile Include="common_fun.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
