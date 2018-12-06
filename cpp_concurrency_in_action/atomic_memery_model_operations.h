@@ -51,6 +51,15 @@ void compare_exchange_weak_memory_order_test();
 class Foo {};
 void atomic_pointer_test();
 
+//5.2.5 Operations on standard atomic integral types
+//5.2.6 The std::atomic<> primary class template
+//5.2.7 Free functions for atomic operations
+typedef unsigned my_data;
+void process_data(std::shared_ptr<my_data>  const &data);
+void process_global_data();
+void update_global_data();
+void atomic_load_store_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H

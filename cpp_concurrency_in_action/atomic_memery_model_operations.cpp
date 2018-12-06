@@ -150,5 +150,42 @@ void atomic_pointer_test() {
     assert(p.load() == &some_array[3]);
 }
 
+//5.2.5 Operations on standard atomic integral types
+//5.2.6 The std::atomic<> primary class template
+//5.2.7 Free functions for atomic operations
+std::shared_ptr<my_data> p(new my_data(-1));
+void process_data(std::shared_ptr<my_data> const &data) {
+    TICK();
+    INFO("data=%d", *data);
+}
+void process_global_data() {
+    TICK();
+    std::shared_ptr<my_data> local = std::atomic_load(&p);
+    process_data(local);
+}
+void update_global_data() {
+    TICK();
+    INFO("p=%d", *p);
+    std::shared_ptr<my_data> local(new my_data(42));
+    std::atomic_store(&p, local);
+    INFO("local=%d", *local);
+    INFO("p=%d", *p);
+}
+void atomic_load_store_test() {
+    TICK();
+#if 0
+    update_global_data();
+    process_global_data();
+#else
+    std::async(update_global_data);
+    std::async(process_global_data);
+
+    std::thread t1(update_global_data);
+    std::thread t2(process_global_data);
+    t1.join();
+    t2.join();
+#endif
+}
+
 }//namespace atomic_type
 
