@@ -81,6 +81,20 @@ void read_x_then_y();
 void read_y_then_x();
 void sequential_consistency_test();
 
+//Listing 5.5 Relaxed operations have very few ordering requirements
+void write_x_then_y_relaxed();
+void write_y_then_x_relaxed();
+void relaxed_test();
+
+//Listing 5.6 Relaxed operations on multiple threads
+struct read_values {
+    int x, y, z;
+};
+void increment(std::atomic<int>* var_to_inc, read_values* values);
+void read_vals(read_values* values);
+void print(read_values *v);
+void relaxed_multi_thread_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H

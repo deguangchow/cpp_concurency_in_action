@@ -88,9 +88,11 @@ int main() {
     atomic_type::atomic_load_store_test();
     atomic_type::atomic_sync_from_thread_test();
     atomic_type::call_unordered_test();
+    atomic_type::sequential_consistency_test();
+    atomic_type::relaxed_test();
 #endif
 
-    atomic_type::sequential_consistency_test();
+    atomic_type::relaxed_multi_thread_test();
 
     return 0;
 }

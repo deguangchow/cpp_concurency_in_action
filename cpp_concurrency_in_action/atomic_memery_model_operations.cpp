@@ -275,5 +275,95 @@ void sequential_consistency_test() {
     assert(z.load() != 0);
 }
 
+
+//Listing 5.5 Relaxed operations have very few ordering requirements
+void write_x_then_y_relaxed() {
+    TICK();
+    x.store(true, std::memory_order_relaxed);
+    y.store(true, std::memory_order_relaxed);
+}
+void write_y_then_x_relaxed() {
+    TICK();
+    while (!y.load(std::memory_order_relaxed)) {
+    }
+    if (x.load(std::memory_order_relaxed)) {
+        ++z;
+    }
+}
+void relaxed_test() {
+    TICK();
+    x = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x_then_y_relaxed);
+    std::thread b(write_y_then_x_relaxed);
+    a.join();
+    b.join();
+
+    INFO("z=%d", z.load());
+    assert(z.load() != 0);
+}
+
+//Listing 5.6 Relaxed operations on multiple threads
+std::atomic<int> X(0), Y(0), Z(0);
+std::atomic<bool> go(false);
+unsigned const kLoopCount = 10;
+read_values values1[kLoopCount];
+read_values values2[kLoopCount];
+read_values values3[kLoopCount];
+read_values values4[kLoopCount];
+read_values values5[kLoopCount];
+void increment(std::atomic<int>* var_to_inc, read_values* values) {
+    TICK();
+    while (!go) {   //Spin, waiting for the signal
+        std::this_thread::yield();
+    }
+    for (unsigned i = 0; i < kLoopCount; ++i) {
+        values[i].x = X.load(std::memory_order_relaxed);
+        values[i].y = Y.load(std::memory_order_relaxed);
+        values[i].z = Z.load(std::memory_order_relaxed);
+        var_to_inc->store(i + 1, std::memory_order_relaxed);
+        std::this_thread::yield();
+    }
+}
+void read_vals(read_values* values) {
+    TICK();
+    while (!go) {   //Spin, waiting for the signal
+        std::this_thread::yield();
+    }
+    for (unsigned i = 0; i < kLoopCount; ++i) {
+        values[i].x = X.load(std::memory_order_relaxed);
+        values[i].y = Y.load(std::memory_order_relaxed);
+        values[i].z = Z.load(std::memory_order_relaxed);
+        std::this_thread::yield();
+    }
+}
+void print(read_values *v) {
+    TICK();
+    for (unsigned i = 0; i < kLoopCount; ++i) {
+        INFO("i=%d, x=%d, y=%d, z=%d", i, v[i].x, v[i].y, v[i].z);
+    }
+}
+void relaxed_multi_thread_test() {
+    TICK();
+    std::thread t1(increment, &X, values1);
+    std::thread t2(increment, &X, values2);
+    std::thread t3(increment, &X, values3);
+    std::thread t4(read_vals, values4);
+    std::thread t5(read_vals, values5);
+    go = true;
+    t5.join();
+    t4.join();
+    t3.join();
+    t2.join();
+    t1.join();
+
+    print(values1);
+    print(values2);
+    print(values3);
+    print(values4);
+    print(values5);
+}
+
 }//namespace atomic_type
 
