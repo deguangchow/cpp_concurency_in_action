@@ -112,5 +112,43 @@ void compare_exchange_weak_memory_order_test() {
     INFO("compare_exchange_weak_bool x=%s", x ? "true" : "false");
 }
 
+//5.2.4 Operations on std::atomic<T*>:pointer arithmetic
+void atomic_pointer_test() {
+    TICK();
+    Foo some_array[5];
+    std::atomic<Foo*> p(some_array);
+#if 1
+    Foo *x = p.fetch_add(2);    //Add 2 to p and return old value
+#else
+    //x=fetch_add(n) <=equal=> (1)x=p; (2) p+=n;
+    Foo *x = p;
+    p += 2;
+#endif
+    assert(x == some_array);
+    assert(p.load() == &some_array[2]);
+
+    x = (p -= 1);   //Subtract 1 from p and return new value
+    assert(x == &some_array[1]);
+    assert(p.load() == &some_array[1]);
+
+    x = p.fetch_add(-1, std::memory_order_release);
+    assert(x == &some_array[1]);
+    assert(p.load() == &some_array[0]);
+
+#if 1
+    x = p.fetch_sub(-4, std::memory_order_release); //Subtract -4 from p and return new value
+#else
+    //x=fetch_sub(n) <=equal=> (1)x=p; (2) p-=n;
+    x = p;
+    p -= (-4);
+#endif
+    assert(x == &some_array[0]);
+    assert(p.load() == &some_array[4]);
+
+    x = p.fetch_sub(1, std::memory_order_release);
+    assert(x == &some_array[4]);
+    assert(p.load() == &some_array[3]);
+}
+
 }//namespace atomic_type
 

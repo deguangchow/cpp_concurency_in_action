@@ -47,6 +47,10 @@ void get_atomic_bool();
 void compare_exchange_weak_test();
 void compare_exchange_weak_memory_order_test();
 
+//5.2.4 Operations on std::atomic<T*>:pointer arithmetic
+class Foo {};
+void atomic_pointer_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H

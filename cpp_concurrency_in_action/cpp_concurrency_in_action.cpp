@@ -83,9 +83,10 @@ int main() {
     atomic_type::spinlock_mutex_test();
     atomic_type::atomic_bool_test();
     atomic_type::compare_exchange_weak_test();
+    atomic_type::compare_exchange_weak_memory_order_test();
 #endif
 
-    atomic_type::compare_exchange_weak_memory_order_test();
+    atomic_type::atomic_pointer_test();
 
     return 0;
 }
