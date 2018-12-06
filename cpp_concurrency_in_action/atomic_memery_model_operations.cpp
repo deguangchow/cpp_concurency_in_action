@@ -211,5 +211,69 @@ void atomic_sync_from_thread_test() {
     th_writer.join();
 }
 
+//5.3.1 The synchronizes-with relationship
+//5.3.2 The happens-before relationship
+//Listing 5.3 Order of evaluation of arguments to a function call is unspecified
+void foo(int a, int b) {
+    TICK();
+    INFO("%d, %d", a, b);
+}
+int get_num() {
+    TICK();
+    static int i = 0;
+    return ++i;
+}
+void call_unordered_test() {
+    TICK();
+    while (true) {
+        foo(get_num(), get_num());  //Calls to get_num() are unordered
+        common_fun::sleep(5 * HUNDRED);
+    }
+}
+
+//5.3.3 Memory ordering for atomic operations
+//Listing 5.4 Sequential consistency implies a total ordering
+std::atomic<bool> x, y;
+std::atomic<int> z;
+void write_x() {
+    TICK();
+    x.store(true, std::memory_order_seq_cst);
+}
+void write_y() {
+    TICK();
+    y.store(true, std::memory_order_seq_cst);
+}
+void read_x_then_y() {
+    TICK();
+    while (!x.load(std::memory_order_seq_cst)) {
+    }
+    if (y.load(std::memory_order_seq_cst)) {
+        ++z;
+    }
+}
+void read_y_then_x() {
+    TICK();
+    while (!y.load(std::memory_order_seq_cst)) {
+    }
+    if (x.load(std::memory_order_seq_cst)) {
+        ++z;
+    }
+}
+void sequential_consistency_test() {
+    TICK();
+    x = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x);
+    std::thread b(write_y);
+    std::thread c(read_x_then_y);
+    std::thread d(read_y_then_x);
+    a.join();
+    b.join();
+    c.join();
+    d.join();
+    assert(z.load() != 0);
+}
+
 }//namespace atomic_type
 

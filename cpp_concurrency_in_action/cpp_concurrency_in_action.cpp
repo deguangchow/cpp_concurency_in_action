@@ -86,9 +86,11 @@ int main() {
     atomic_type::compare_exchange_weak_memory_order_test();
     atomic_type::atomic_pointer_test();
     atomic_type::atomic_load_store_test();
+    atomic_type::atomic_sync_from_thread_test();
+    atomic_type::call_unordered_test();
 #endif
 
-    atomic_type::atomic_sync_from_thread_test();
+    atomic_type::sequential_consistency_test();
 
     return 0;
 }

@@ -66,6 +66,21 @@ void reader_thread();
 void writer_thread();
 void atomic_sync_from_thread_test();
 
+//5.3.1 The synchronizes-with relationship
+//5.3.2 The happens-before relationship
+//Listing 5.3 Order of evaluation of arguments to a function call is unspecified
+void foo(int a, int b);
+int get_num();
+void call_unordered_test();
+
+//5.3.3 Memory ordering for atomic operations
+//Listing 5.4 Sequential consistency implies a total ordering
+void write_x();
+void write_y();
+void read_x_then_y();
+void read_y_then_x();
+void sequential_consistency_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
