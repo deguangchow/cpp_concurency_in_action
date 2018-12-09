@@ -92,9 +92,10 @@ int main() {
     atomic_type::relaxed_test();
     atomic_type::relaxed_multi_thread_test();
     atomic_type::acquire_release_test();
+    atomic_type::acquire_release_relaxed_test();
 #endif
 
-    atomic_type::acquire_release_relaxed_test();
+    atomic_type::transitive_sync_acquire_release();
 
     return 0;
 }

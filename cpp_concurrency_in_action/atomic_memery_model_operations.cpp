@@ -441,5 +441,46 @@ void acquire_release_relaxed_test()  {
     assert(z.load() != 0);
 }
 
+//Listing 5.9 Transitive synchronization using acquire and release ordering
+std::atomic<int> atomic_data[5];
+std::atomic<bool> sync1(false), sync2(false);
+void thread_1() {
+    TICK();
+    atomic_data[0].store(42, std::memory_order_relaxed);
+    atomic_data[1].store(97, std::memory_order_relaxed);
+    atomic_data[2].store(17, std::memory_order_relaxed);
+    atomic_data[3].store(-141, std::memory_order_relaxed);
+    atomic_data[4].store(2003, std::memory_order_relaxed);
+    sync1.store(true, std::memory_order_release);   //Set sync1
+}
+void thread_2() {
+    TICK();
+    while (!sync1.load(std::memory_order_acquire)) {//Loop until sync1 is set
+        INFO("thread_2 Loop");
+    }
+    sync2.store(true, std::memory_order_release);   //Set sync2
+}
+void thread_3() {
+    TICK();
+    while (!sync2.load(std::memory_order_acquire)) {//Loop until sync2 is set
+        INFO("thread_3 Loop");
+    }
+    assert(atomic_data[0].load(std::memory_order_relaxed) == 42);
+    assert(atomic_data[1].load(std::memory_order_relaxed) == 97);
+    assert(atomic_data[2].load(std::memory_order_relaxed) == 17);
+    assert(atomic_data[3].load(std::memory_order_relaxed) == -141);
+    assert(atomic_data[4].load(std::memory_order_relaxed) == 2003);
+}
+
+void transitive_sync_acquire_release() {
+    TICK();
+    std::thread t1(thread_1);
+    std::thread t2(thread_2);
+    std::thread t3(thread_3);
+    t1.join();
+    t2.join();
+    t3.join();
+}
+
 }//namespace atomic_type
 

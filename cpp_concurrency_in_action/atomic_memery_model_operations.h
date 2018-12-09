@@ -107,6 +107,12 @@ void write_x_then_y_relaxed_release();
 void read_y_then_x_acquire_relaxed();
 void acquire_release_relaxed_test();
 
+//Listing 5.9 Transitive synchronization using acquire and release ordering
+void thread_1();
+void thread_2();
+void thread_3();
+void transitive_sync_acquire_release();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
