@@ -347,11 +347,13 @@ void print(read_values *v) {
 void relaxed_multi_thread_test() {
     TICK();
     std::thread t1(increment, &X, values1);
-    std::thread t2(increment, &X, values2);
-    std::thread t3(increment, &X, values3);
+    std::thread t2(increment, &Y, values2);
+    std::thread t3(increment, &Z, values3);
     std::thread t4(read_vals, values4);
     std::thread t5(read_vals, values5);
+
     go = true;
+
     t5.join();
     t4.join();
     t3.join();
