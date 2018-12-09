@@ -387,7 +387,7 @@ void read_x_then_y_acquire() {
         INFO("z=%d", z);
     }
 }
-void read_y_then_x_acuire() {
+void read_y_then_x_acquire() {
     TICK();
     while (!y.load(std::memory_order_acquire)) {
         INFO("read_y_then_x_acuire");
@@ -397,7 +397,7 @@ void read_y_then_x_acuire() {
         INFO("z=%d", z);
     }
 }
-void aquire_release_test() {
+void acquire_release_test() {
     TICK();
     x = false;
     y = false;
@@ -405,7 +405,7 @@ void aquire_release_test() {
     std::thread a(write_x_release);
     std::thread b(write_y_release);
     std::thread c(read_x_then_y_acquire);
-    std::thread d(read_y_then_x_acuire);
+    std::thread d(read_y_then_x_acquire);
     a.join();
     b.join();
     c.join();
@@ -413,6 +413,33 @@ void aquire_release_test() {
     assert(z.load() != 0);
 }
 
+//Listing 5.8 Acquire-release operations can impose ordering on relaxed operations
+void write_x_then_y_relaxed_release() {
+    TICK();
+    x.store(true, std::memory_order_relaxed);
+    y.store(true, std::memory_order_release);
+}
+void read_y_then_x_acquire_relaxed() {
+    TICK();
+    while (!y.load(std::memory_order_acquire)) {
+        INFO("read_y_then_x_acquire_relaxed");
+    }
+    if (x.load(std::memory_order_relaxed)) {
+        ++z;
+        INFO("z=%d", z);
+    }
+}
+void acquire_release_relaxed_test()  {
+    TICK();
+    x = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x_then_y_relaxed_release);
+    std::thread b(read_y_then_x_acquire_relaxed);
+    a.join();
+    b.join();
+    assert(z.load() != 0);
+}
 
 }//namespace atomic_type
 

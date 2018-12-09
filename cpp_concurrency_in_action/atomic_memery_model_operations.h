@@ -99,8 +99,13 @@ void relaxed_multi_thread_test();
 void write_x_release();
 void write_y_release();
 void read_x_then_y_acquire();
-void read_y_then_x_acuire();
-void aquire_release_test();
+void read_y_then_x_acquire();
+void acquire_release_test();
+
+//Listing 5.8 Acquire-release operations can impose ordering on relaxed operations
+void write_x_then_y_relaxed_release();
+void read_y_then_x_acquire_relaxed();
+void acquire_release_relaxed_test();
 
 }//namespace atomic_type
 

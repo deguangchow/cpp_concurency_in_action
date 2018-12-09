@@ -91,9 +91,10 @@ int main() {
     atomic_type::sequential_consistency_test();
     atomic_type::relaxed_test();
     atomic_type::relaxed_multi_thread_test();
+    atomic_type::acquire_release_test();
 #endif
 
-    atomic_type::aquire_release_test();
+    atomic_type::acquire_release_relaxed_test();
 
     return 0;
 }
