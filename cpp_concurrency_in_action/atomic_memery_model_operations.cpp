@@ -367,5 +367,52 @@ void relaxed_multi_thread_test() {
     print(values5);
 }
 
+
+//Listing 5.7 Acquire-release doesn`t imply a total ordering
+void write_x_release() {
+    TICK();
+    x.store(true, std::memory_order_release);
+}
+void write_y_release() {
+    TICK();
+    y.store(true, std::memory_order_release);
+}
+void read_x_then_y_acquire() {
+    TICK();
+    while (!x.load(std::memory_order_acquire)) {
+        INFO("read_x_then_y_acquire");
+    }
+    if (y.load(std::memory_order_acquire)) {
+        ++z;
+        INFO("z=%d", z);
+    }
+}
+void read_y_then_x_acuire() {
+    TICK();
+    while (!y.load(std::memory_order_acquire)) {
+        INFO("read_y_then_x_acuire");
+    }
+    if (x.load(std::memory_order_acquire)) {
+        ++z;
+        INFO("z=%d", z);
+    }
+}
+void aquire_release_test() {
+    TICK();
+    x = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x_release);
+    std::thread b(write_y_release);
+    std::thread c(read_x_then_y_acquire);
+    std::thread d(read_y_then_x_acuire);
+    a.join();
+    b.join();
+    c.join();
+    d.join();
+    assert(z.load() != 0);
+}
+
+
 }//namespace atomic_type
 

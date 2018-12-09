@@ -95,6 +95,13 @@ void read_vals(read_values* values);
 void print(read_values *v);
 void relaxed_multi_thread_test();
 
+//Listing 5.7 Acquire-release doesn`t imply a total ordering
+void write_x_release();
+void write_y_release();
+void read_x_then_y_acquire();
+void read_y_then_x_acuire();
+void aquire_release_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
