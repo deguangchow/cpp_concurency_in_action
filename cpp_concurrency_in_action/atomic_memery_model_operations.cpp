@@ -509,5 +509,47 @@ void consume_test() {
     t2.join();
 }
 
+//5.3.4 Release sequences and synchronizes-with
+//Listing 5.11 Reading values from a queue with atomic operations
+std::vector<int> queue_data;
+std::atomic<int> count;
+void populate_queue() {
+    TICK();
+    unsigned const number_of_item = 20;
+    queue_data.clear();
+    for (unsigned i = 0; i < number_of_item; ++i) {
+        queue_data.push_back(i);
+    }
+    count.store(number_of_item, std::memory_order_release);//The initial store
+}
+void wait_for_more_items() {
+    TICK();
+}
+void process(int const &val) {
+    TICK();
+    INFO("val=%d", val);
+    common_fun::sleep(TEN * HUNDRED);
+}
+void consume_queue_item() {
+    TICK();
+    while (true) {
+        int item_index;
+        if ((item_index = count.fetch_sub(1, std::memory_order_acquire)) <= 0) {// An RMW operation
+            wait_for_more_items();//Wait for more items
+            continue;
+        }
+        process(queue_data[item_index - 1]);//Reading queue_datas is safe
+    }
+}
+void consume_queue_test() {
+    TICK();
+    std::thread a(populate_queue);
+    std::thread b(consume_queue_item);
+    std::thread c(consume_queue_item);
+    a.join();
+    b.join();
+    c.join();
+}
+
 }//namespace atomic_type
 

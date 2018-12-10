@@ -122,6 +122,14 @@ void create_x();
 void use_x();
 void consume_test();
 
+//5.3.4 Release sequences and synchronizes-with
+//Listing 5.11 Reading values from a queue with atomic operations
+void populate_queue();
+void wait_for_more_items();
+void process(int const &val);
+void consume_queue_item();
+void consume_queue_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
