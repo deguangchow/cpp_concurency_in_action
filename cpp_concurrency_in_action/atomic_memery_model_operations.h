@@ -136,6 +136,12 @@ void write_x_then_y_fence();
 void read_y_then_x_fence();
 void fences_test();
 
+//5.3.6 Ordering nonatomic operations with atomics
+//Listing 5.13 Enforcing ordering on nonatomic operations
+void write_x_then_y_nonatomic();
+void read_y_then_x_nonatomic();
+void nonatomic_test();
+
 
 }//namespace atomic_type
 

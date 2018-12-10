@@ -555,9 +555,16 @@ void consume_queue_test() {
 //Listing 5.12 Relaxed operations can be ordered with fences
 void write_x_then_y_fence() {
     TICK();
+#if 0
     x.store(true, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
     y.store(true, std::memory_order_relaxed);
+#else
+    std::atomic_thread_fence(std::memory_order_release);
+    x.store(true, std::memory_order_relaxed);
+    y.store(true, std::memory_order_relaxed);
+
+#endif
 }
 void read_y_then_x_fence() {
     TICK();
@@ -576,6 +583,42 @@ void fences_test() {
     z = 0;
     std::thread a(write_x_then_y_fence);
     std::thread b(read_y_then_x_fence);
+    a.join();
+    b.join();
+    assert(z.load() != 0);
+}
+
+
+//5.3.6 Ordering nonatomic operations with atomics
+//Listing 5.13 Enforcing ordering on nonatomic operations
+bool x_nonatomic = false;//x is now a plain nonatomic variable
+#if 0
+std::atomic<bool> y;
+std::atomic<int> z;
+#endif
+void write_x_then_y_nonatomic() {
+    TICK();
+    x_nonatomic = true;//#1 Store to x before the fence
+    std::atomic_thread_fence(std::memory_order_release);
+    y.store(true, std::memory_order_relaxed);//#2 Store to y after the fence
+}
+void read_y_then_x_nonatomic() {
+    TICK();
+    while (!y.load(std::memory_order_relaxed)) {//#3 Wait until you see the write from #2
+        INFO("Loop");
+    }
+    std::atomic_thread_fence(std::memory_order_acquire);
+    if (x_nonatomic) {
+        ++z;//This will read the value written by #1
+    }
+}
+void nonatomic_test() {
+    TICK();
+    x_nonatomic = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x_then_y_nonatomic);
+    std::thread b(read_y_then_x_nonatomic);
     a.join();
     b.join();
     assert(z.load() != 0);
