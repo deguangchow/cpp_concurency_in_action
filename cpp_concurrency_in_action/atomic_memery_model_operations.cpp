@@ -551,5 +551,35 @@ void consume_queue_test() {
     c.join();
 }
 
+//5.3.5 Fences
+//Listing 5.12 Relaxed operations can be ordered with fences
+void write_x_then_y_fence() {
+    TICK();
+    x.store(true, std::memory_order_relaxed);
+    std::atomic_thread_fence(std::memory_order_release);
+    y.store(true, std::memory_order_relaxed);
+}
+void read_y_then_x_fence() {
+    TICK();
+    while (!y.load(std::memory_order_relaxed)) {
+        INFO("loop");
+    }
+    std::atomic_thread_fence(std::memory_order_acquire);
+    if (x.load(std::memory_order_relaxed)) {
+        ++z;
+    }
+}
+void fences_test() {
+    TICK();
+    x = false;
+    y = false;
+    z = 0;
+    std::thread a(write_x_then_y_fence);
+    std::thread b(read_y_then_x_fence);
+    a.join();
+    b.join();
+    assert(z.load() != 0);
+}
+
 }//namespace atomic_type
 

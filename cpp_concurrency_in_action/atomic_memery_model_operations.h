@@ -130,6 +130,13 @@ void process(int const &val);
 void consume_queue_item();
 void consume_queue_test();
 
+//5.3.5 Fences
+//Listing 5.12 Relaxed operations can be ordered with fences
+void write_x_then_y_fence();
+void read_y_then_x_fence();
+void fences_test();
+
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
