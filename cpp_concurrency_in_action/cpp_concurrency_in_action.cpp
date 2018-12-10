@@ -93,9 +93,10 @@ int main() {
     atomic_type::relaxed_multi_thread_test();
     atomic_type::acquire_release_test();
     atomic_type::acquire_release_relaxed_test();
+    atomic_type::transitive_sync_acquire_release();
 #endif
 
-    atomic_type::transitive_sync_acquire_release();
+    atomic_type::consume_test();
 
     return 0;
 }

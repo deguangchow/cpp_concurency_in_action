@@ -471,7 +471,6 @@ void thread_3() {
     assert(atomic_data[3].load(std::memory_order_relaxed) == -141);
     assert(atomic_data[4].load(std::memory_order_relaxed) == 2003);
 }
-
 void transitive_sync_acquire_release() {
     TICK();
     std::thread t1(thread_1);
@@ -480,6 +479,34 @@ void transitive_sync_acquire_release() {
     t1.join();
     t2.join();
     t3.join();
+}
+
+//Listing 5.10 Using std::memory_order_consume to synchronize data
+std::atomic<X1*> pX1;
+std::atomic<int> a;
+void create_x() {
+    TICK();
+    X1 *x = new X1;
+    x->i = 42;
+    x->s = "hello";
+    a.store(99, std::memory_order_relaxed);
+    pX1.store(x, std::memory_order_relaxed);
+}
+void use_x() {
+    TICK();
+    X1* x;
+    while (!(x = pX1.load(std::memory_order_consume))) {
+        common_fun::sleep(ONE);
+    }
+    assert(x->i == 42);
+    assert(x->s == "hello");
+    assert(a.load(std::memory_order_relaxed) == 99);
+}
+void consume_test() {
+    std::thread t1(create_x);
+    std::thread t2(use_x);
+    t1.join();
+    t2.join();
 }
 
 }//namespace atomic_type

@@ -113,6 +113,15 @@ void thread_2();
 void thread_3();
 void transitive_sync_acquire_release();
 
+//Listing 5.10 Using std::memory_order_consume to synchronize data
+struct X1 {
+    int i;
+    std::string s;
+};
+void create_x();
+void use_x();
+void consume_test();
+
 }//namespace atomic_type
 
 #endif  //ATOMIC_MEMORY_MODEL_OPERATIONS_H
