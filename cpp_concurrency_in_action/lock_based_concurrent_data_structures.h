@@ -140,6 +140,7 @@ private:
     mutable std::mutex mut;
     std::queue<std::shared_ptr<T>> data_queue;
     std::condition_variable data_cond;
+
 public:
     threadsafe_queue_shared_ptr() {}
     void wait_and_pop(T &value) {
@@ -193,7 +194,44 @@ void threadsafe_queue_shared_ptr_write();
 void threadsafe_queue_shared_ptr_read();
 void threadsafe_queue_shared_ptr_test();
 
+//6.2.3 A thread-safe queue using fine-grained locks and condition variables
+//Listing 6.4 A simple single-threaded queue implementation
+template<typename T>
+class queue {
+private:
+    struct node {
+        T data;
+        std::unique_ptr<node> next;
+        explicit node(T data_) : data(std::move(data_)) {}
+    };
+    std::unique_ptr<node> head;
+    node *tail;
 
+public:
+    queue() : tail(nullptr) {}
+    queue(queue const &other) = delete;
+    queue& operator=(queue const &other) = delete;
+    std::shared_ptr<T> try_pop() {
+        TICK();
+        if (!head) {
+            return std::shared_ptr<T>();
+        }
+        std::shared_ptr<T> const res(std::make_shared<T>(std::move(head->data)));
+        std::unique_ptr<T> const old_head = std::move(head);
+        head = std::move(old_head->next);
+        return res;
+    }
+    void push(T new_value) {
+        std::unique_ptr<node> p(new node(std::move(new_value)));
+        node* const new_tail = p->get();
+        if (tail) {
+            tail->next = std::move(p);
+        } else {
+            head = std::move(p);
+        }
+        tail = new_tail;
+    }
+};
 
 }//namespace lock_based_conc_data
 
