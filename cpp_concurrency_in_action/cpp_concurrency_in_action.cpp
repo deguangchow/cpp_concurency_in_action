@@ -97,9 +97,10 @@ int main() {
     atomic_type::consume_test();
     atomic_type::consume_queue_test();
     atomic_type::fences_test();
+    atomic_type::nonatomic_test();
 #endif
 
-    atomic_type::nonatomic_test();
+
 
     return 0;
 }

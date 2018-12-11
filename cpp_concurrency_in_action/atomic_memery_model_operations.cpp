@@ -279,12 +279,14 @@ void sequential_consistency_test() {
 //Listing 5.5 Relaxed operations have very few ordering requirements
 void write_x_then_y_relaxed() {
     TICK();
+    common_fun::sleep(ONE);
     x.store(true, std::memory_order_relaxed);
     y.store(true, std::memory_order_relaxed);
 }
 void write_y_then_x_relaxed() {
     TICK();
     while (!y.load(std::memory_order_relaxed)) {
+        WARN("Loop");
     }
     if (x.load(std::memory_order_relaxed)) {
         ++z;
@@ -316,6 +318,7 @@ read_values values5[kLoopCount];
 void increment(std::atomic<int>* var_to_inc, read_values* values) {
     TICK();
     while (!go) {   //Spin, waiting for the signal
+        WARN("Loop1");
         std::this_thread::yield();
     }
     for (unsigned i = 0; i < kLoopCount; ++i) {
@@ -329,6 +332,7 @@ void increment(std::atomic<int>* var_to_inc, read_values* values) {
 void read_vals(read_values* values) {
     TICK();
     while (!go) {   //Spin, waiting for the signal
+        WARN("Loop2");
         std::this_thread::yield();
     }
     for (unsigned i = 0; i < kLoopCount; ++i) {
@@ -371,30 +375,32 @@ void relaxed_multi_thread_test() {
 //Listing 5.7 Acquire-release doesn`t imply a total ordering
 void write_x_release() {
     TICK();
+    common_fun::sleep(TEN);
     x.store(true, std::memory_order_release);
 }
 void write_y_release() {
     TICK();
+    common_fun::sleep(TEN);
     y.store(true, std::memory_order_release);
 }
 void read_x_then_y_acquire() {
     TICK();
     while (!x.load(std::memory_order_acquire)) {
-        INFO("read_x_then_y_acquire");
+        WARN("Loop1");
     }
     if (y.load(std::memory_order_acquire)) {
         ++z;
-        INFO("z=%d", z);
+        INFO("1 z=%d", z);
     }
 }
 void read_y_then_x_acquire() {
     TICK();
     while (!y.load(std::memory_order_acquire)) {
-        INFO("read_y_then_x_acuire");
+        WARN("Loop2");
     }
     if (x.load(std::memory_order_acquire)) {
         ++z;
-        INFO("z=%d", z);
+        INFO("2 z=%d", z);
     }
 }
 void acquire_release_test() {
@@ -416,13 +422,14 @@ void acquire_release_test() {
 //Listing 5.8 Acquire-release operations can impose ordering on relaxed operations
 void write_x_then_y_relaxed_release() {
     TICK();
+    common_fun::sleep(ONE);
     x.store(true, std::memory_order_relaxed);
     y.store(true, std::memory_order_release);
 }
 void read_y_then_x_acquire_relaxed() {
     TICK();
     while (!y.load(std::memory_order_acquire)) {
-        INFO("read_y_then_x_acquire_relaxed");
+        WARN("Loop");
     }
     if (x.load(std::memory_order_relaxed)) {
         ++z;
@@ -446,6 +453,7 @@ std::atomic<int> atomic_data[5];
 std::atomic<bool> sync1(false), sync2(false);
 void thread_1() {
     TICK();
+    common_fun::sleep(ONE);
     atomic_data[0].store(42, std::memory_order_relaxed);
     atomic_data[1].store(97, std::memory_order_relaxed);
     atomic_data[2].store(17, std::memory_order_relaxed);
@@ -456,15 +464,24 @@ void thread_1() {
 void thread_2() {
     TICK();
     while (!sync1.load(std::memory_order_acquire)) {//Loop until sync1 is set
-        INFO("thread_2 Loop");
+        WARN("thread_2 Loop");
     }
+    common_fun::sleep(ONE);
     sync2.store(true, std::memory_order_release);   //Set sync2
 }
 void thread_3() {
     TICK();
     while (!sync2.load(std::memory_order_acquire)) {//Loop until sync2 is set
-        INFO("thread_3 Loop");
+        WARN("thread_3 Loop");
     }
+
+    INFO("atomic_data={%d, %d, %d, %d, %d}",
+        atomic_data[0].load(std::memory_order_relaxed),
+        atomic_data[1].load(std::memory_order_relaxed), 
+        atomic_data[2].load(std::memory_order_relaxed), 
+        atomic_data[3].load(std::memory_order_relaxed), 
+        atomic_data[4].load(std::memory_order_relaxed));
+
     assert(atomic_data[0].load(std::memory_order_relaxed) == 42);
     assert(atomic_data[1].load(std::memory_order_relaxed) == 97);
     assert(atomic_data[2].load(std::memory_order_relaxed) == 17);
@@ -486,6 +503,7 @@ std::atomic<X1*> pX1;
 std::atomic<int> a;
 void create_x() {
     TICK();
+    common_fun::sleep(ONE);
     X1 *x = new X1;
     x->i = 42;
     x->s = "hello";
@@ -496,8 +514,9 @@ void use_x() {
     TICK();
     X1* x;
     while (!(x = pX1.load(std::memory_order_consume))) {
-        common_fun::sleep(ONE);
+        WARN("Loop");
     }
+    INFO("x={%d, %s}, a=%d", x->i, x->s.c_str(), a.load(std::memory_order_relaxed));
     assert(x->i == 42);
     assert(x->s == "hello");
     assert(a.load(std::memory_order_relaxed) == 99);
@@ -555,6 +574,7 @@ void consume_queue_test() {
 //Listing 5.12 Relaxed operations can be ordered with fences
 void write_x_then_y_fence() {
     TICK();
+    common_fun::sleep(ONE);
 #if 0
     x.store(true, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
@@ -569,11 +589,12 @@ void write_x_then_y_fence() {
 void read_y_then_x_fence() {
     TICK();
     while (!y.load(std::memory_order_relaxed)) {
-        INFO("loop");
+        WARN("loop");
     }
     std::atomic_thread_fence(std::memory_order_acquire);
     if (x.load(std::memory_order_relaxed)) {
         ++z;
+        INFO("z=%d", z);
     }
 }
 void fences_test() {
@@ -598,6 +619,7 @@ std::atomic<int> z;
 #endif
 void write_x_then_y_nonatomic() {
     TICK();
+    common_fun::sleep(ONE);
     x_nonatomic = true;//#1 Store to x before the fence
     std::atomic_thread_fence(std::memory_order_release);
     y.store(true, std::memory_order_relaxed);//#2 Store to y after the fence
@@ -605,11 +627,12 @@ void write_x_then_y_nonatomic() {
 void read_y_then_x_nonatomic() {
     TICK();
     while (!y.load(std::memory_order_relaxed)) {//#3 Wait until you see the write from #2
-        INFO("Loop");
+        WARN("Loop");
     }
     std::atomic_thread_fence(std::memory_order_acquire);
     if (x_nonatomic) {
         ++z;//This will read the value written by #1
+        INFO("z=%d", z);
     }
 }
 void nonatomic_test() {
