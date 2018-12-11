@@ -105,6 +105,8 @@ int main() {
 
 #endif
 
+    lock_based_conc_data::lock_thread_safe_stack_test();
+
 
     return 0;
 }
