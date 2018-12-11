@@ -101,5 +101,52 @@ void treadsafe_queue_test() {
     t6.join();
 }
 
+//Listing 6.3 A thread-safe queue holding std::shared_ptr<> instances
+threadsafe_queue_shared_ptr<unsigned> tsqsp;
+void threadsafe_queue_shared_ptr_write() {
+    TICK();
+    tsqsp.push(1);
+    tsqsp.push(2);
+    tsqsp.push(3);
+    tsqsp.push(4);
+}
+void threadsafe_queue_shared_ptr_read() {
+    TICK();
+    unsigned u1 = -1;
+    tsqsp.wait_and_pop(u1);
+    INFO("wait_and_pop(%d)", u1);
+    unsigned u2 = -1;
+    tsqsp.try_pop(u2);
+    INFO("try_pop(%d)", u2);
+    std::shared_ptr<unsigned> ptr3 = tsqsp.wait_and_pop();
+    if (nullptr == ptr3) {
+        INFO("wait_and_pop()=nullptr");
+    } else {
+        INFO("wait_and_pop()=%d", *ptr3);
+    }
+    std::shared_ptr<unsigned> ptr4 = tsqsp.try_pop();
+    if (nullptr == ptr4) {
+        INFO("try_pop()=nullptr");
+    } else {
+        INFO("try_pop()=%d", *ptr4);
+    }
+}
+
+void threadsafe_queue_shared_ptr_test() {
+    TICK();
+    std::thread t1(threadsafe_queue_shared_ptr_write);
+    std::thread t2(threadsafe_queue_shared_ptr_write);
+    std::thread t3(threadsafe_queue_shared_ptr_write);
+    std::thread t4(threadsafe_queue_shared_ptr_read);
+    std::thread t5(threadsafe_queue_shared_ptr_read);
+    std::thread t6(threadsafe_queue_shared_ptr_read);
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
+}
+
 }//namespace lock_based_conc_data
 
