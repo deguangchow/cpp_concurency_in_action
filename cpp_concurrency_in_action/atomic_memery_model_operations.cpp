@@ -477,9 +477,9 @@ void thread_3() {
 
     INFO("atomic_data={%d, %d, %d, %d, %d}",
         atomic_data[0].load(std::memory_order_relaxed),
-        atomic_data[1].load(std::memory_order_relaxed), 
-        atomic_data[2].load(std::memory_order_relaxed), 
-        atomic_data[3].load(std::memory_order_relaxed), 
+        atomic_data[1].load(std::memory_order_relaxed),
+        atomic_data[2].load(std::memory_order_relaxed),
+        atomic_data[3].load(std::memory_order_relaxed),
         atomic_data[4].load(std::memory_order_relaxed));
 
     assert(atomic_data[0].load(std::memory_order_relaxed) == 42);

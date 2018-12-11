@@ -31,6 +31,9 @@
     <Filter Include="chapter5">
       <UniqueIdentifier>{49157919-aab1-4c8a-8208-b5fdcf63e376}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter6">
+      <UniqueIdentifier>{b94ba8a4-af57-488e-87c4-7ff9c8c8e618}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -66,6 +69,9 @@
     <ClInclude Include="common_fun.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="lock_based_concurrent_data_structures.h">
+      <Filter>chapter6</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -94,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="common_fun.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="lock_based_concurrent_data_structures.cpp">
+      <Filter>chapter6</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

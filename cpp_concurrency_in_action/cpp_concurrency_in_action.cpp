@@ -14,6 +14,7 @@
 #include "thread_sharing_data.h"
 #include "synchronizing_concurrent_operations.h"
 #include "atomic_memery_model_operations.h"
+#include "lock_based_concurrent_data_structures.h"
 
 int main() {
     TICK();
@@ -100,6 +101,9 @@ int main() {
     atomic_type::nonatomic_test();
 #endif
 
+#if 0//chapter6
+
+#endif
 
 
     return 0;
