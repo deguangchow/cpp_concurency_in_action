@@ -240,5 +240,59 @@ void threadsafe_queue_fine_grained_test() {
     t6.join();
 }
 
+//Listing 6.7 A thread-safe queue with locking and waiting: internals and interface
+threadsafe_waiting_queue<unsigned> tswq;
+void threadsafe_waiting_queue_write() {
+    TICK();
+    tswq.push(1);
+    tswq.push(2);
+    tswq.push(3);
+    tswq.push(4);
+}
+void threadsafe_waiting_queue_read() {
+    TICK();
+#if 0
+    std::shared_ptr<unsigned> ptr1 = tswq.try_pop();
+    std::shared_ptr<unsigned> ptr2 = tswq.try_pop();
+#else
+    std::shared_ptr<unsigned> ptr1 = tswq.wait_and_pop();
+    std::shared_ptr<unsigned> ptr2 = tswq.wait_and_pop();
+#endif
+    std::shared_ptr<unsigned> ptr3 = tswq.wait_and_pop();
+    unsigned u4 = 0;
+    tswq.wait_and_pop(u4);
+
+    INFO("try_pop()=%d", *ptr1);
+    INFO("try_pop()=%d", *ptr2);
+    INFO("wait_and_pop()=%d", *ptr3);
+    INFO("try_pop()=%d", u4);
+}
+void threadsafe_waiting_queue_loop() {
+    TICK();
+    tswq.loop();
+}
+void threadsafe_waiting_queue_test() {
+    TICK();
+    //std::thread t(threadsafe_waiting_queue_loop);
+    std::thread t1(threadsafe_waiting_queue_write);
+    std::thread t2(threadsafe_waiting_queue_write);
+    std::thread t3(threadsafe_waiting_queue_write);
+    std::thread t4(threadsafe_waiting_queue_write);
+    std::thread t5(threadsafe_waiting_queue_read);
+    std::thread t6(threadsafe_waiting_queue_read);
+    std::thread t7(threadsafe_waiting_queue_read);
+    //std::thread t8(threadsafe_waiting_queue_read);
+
+    //t.join();
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
+    t7.join();
+    //t8.join();
+}
+
 }//namespace lock_based_conc_data
 

@@ -342,6 +342,135 @@ void threadsafe_queue_fine_grained_write();
 void threadsafe_queue_fine_grained_read();
 void threadsafe_queue_fine_grained_test();
 
+//Listing 6.7 A thread-safe queue with locking and waiting: internals and interface
+template<typename T>
+class threadsafe_waiting_queue {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        std::unique_ptr<node> next;
+    };
+    std::mutex head_mutex;
+    std::unique_ptr<node> head;
+    std::mutex tail_mutex;
+    node *tail;
+    std::condition_variable data_cond;
+
+    node* get_tail() {
+        TICK();
+        std::lock_guard<std::mutex> tail_lock(tail_mutex);
+        return tail;
+    }
+    std::unique_ptr<node> pop_head() {
+        TICK();
+        std::unique_ptr<node> old_head = std::move(head);
+        head = std::move(old_head->next);
+        return old_head;
+    }
+    std::unique_lock<std::mutex> wait_for_data() {
+        TICK();
+        std::unique_lock<std::mutex> head_lock(head_mutex);
+        data_cond.wait(head_lock, [&] {return head.get() != get_tail(); });
+        return std::move(head_lock);
+    }
+    std::unique_ptr<node> wait_pop_head() {
+        TICK();
+        std::unique_lock<std::mutex> head_lock(wait_for_data());
+        return pop_head();
+    }
+    std::unique_ptr<node> wait_pop_head(T &value) {
+        TICK();
+        std::unique_lock<std::mutex> head_lock(wait_for_data());
+        value = std::move(*head->data);
+        return pop_head();
+    }
+    std::unique_ptr<node> try_pop_head() {
+        TICK();
+        std::lock_guard<std::mutex> head_lock(head_mutex);
+        if (head.get() == tail) {
+            return std::unique_ptr<node>();
+        }
+        return pop_head();
+    }
+    std::unique_ptr<node> try_pop_head(T& value) {
+        TICK();
+        std::lock_guard<std::mutex> head_lock(head_mutex);
+        if (head.get() == tail) {
+            return std::unique_ptr<node>();
+        }
+        value = std::move(*head->data);
+        return pop_head();
+    }
+
+public:
+    threadsafe_waiting_queue() :head(new node), tail(head.get()) {}
+    threadsafe_waiting_queue(const threadsafe_waiting_queue &other) = delete;
+    threadsafe_waiting_queue& operator=(const threadsafe_waiting_queue &other) = delete;
+
+    std::shared_ptr<T> wait_and_pop() {
+        TICK();
+        std::unique_ptr<node> const old_head = wait_pop_head();
+        return old_head->data;
+    }
+    void wait_and_pop(T& value) {
+        TICK();
+        std::unique_ptr<node> const old_head = wait_pop_head(value);
+    }
+    std::shared_ptr<T> try_pop() {
+        TICK();
+#if 0
+        std::unique_lock<std::mutex> head_lock(head_mutex);
+        data_cond.wait(head_lock, [&] {return head.get() != tail; });
+
+        std::unique_ptr<node> old_head = std::move(head);
+        if (!old_head) {
+            return std::make_shared<T>();
+        }
+        head = std::move(old_head->next);
+        return old_head->data;
+#else
+        std::unique_ptr<node> old_head = try_pop_head();
+        return old_head ? old_head->data : std::shared_ptr<T>();
+#endif
+    }
+    std::unique_ptr<node> try_pop(T& value) {
+        TICK();
+        std::unique_ptr<node> const old_head = try_pop_head(value);
+        return old_head;
+    }
+    void push(T new_value) {
+        TICK();
+        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
+        std::unique_ptr<node> p(new node);
+        {
+            std::lock_guard<std::mutex> tail_lock(tail_mutex);
+            tail->data = new_data;
+            node* const new_tail = p.get();
+            tail->next = std::move(p);
+            tail = new_tail;
+        }
+        data_cond.notify_one();
+    }
+    bool empty() {
+        TICK();
+        std::lock_guard<std::mutex> head_lock(head_mutex);
+        return head.get() == tail;
+    }
+    void loop() {
+        TICK();
+        while (true) {
+            if (empty()) {
+                common_fun::sleep(THOUSAND);
+                continue;
+            }
+            data_cond.notify_one();
+        }
+    }
+};
+void threadsafe_waiting_queue_write();
+void threadsafe_waiting_queue_read();
+void threadsafe_waiting_queue_loop();
+void threadsafe_waiting_queue_test();
 
 
 }//namespace lock_based_conc_data

@@ -110,8 +110,7 @@ int main() {
     lock_based_conc_data::threadsafe_queue_fine_grained_test();
 #endif
 
-    lock_based_conc_data::queue_test();
-
+    lock_based_conc_data::threadsafe_waiting_queue_test();
 
     return 0;
 }
