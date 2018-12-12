@@ -148,6 +148,26 @@ void threadsafe_queue_shared_ptr_test() {
     t6.join();
 }
 
+//Listing 6.4 A simple single-threaded queue implementation
+void queue_test() {
+    TICK();
+    queue<unsigned> q;
+    q.push(1);
+    q.push(2);
+    q.push(3);
+    q.push(4);
+    std::shared_ptr<unsigned> ptr1 = q.try_pop();
+    std::shared_ptr<unsigned> ptr2 = q.try_pop();
+    std::shared_ptr<unsigned> ptr3 = q.try_pop();
+    std::shared_ptr<unsigned> ptr4 = q.try_pop();
+    std::shared_ptr<unsigned> ptr5 = q.try_pop();
+    INFO("try_pop()=%d", *ptr1);
+    INFO("try_pop()=%d", *ptr2);
+    INFO("try_pop()=%d", *ptr3);
+    INFO("try_pop()=%d", *ptr4);
+    INFO("try_pop()=%d", *ptr5);//0 will be printed as the function 'try_pop' would return 0 if empty
+}
+
 //Listing 6.5 A simple queue with a dummy node
 dummy_queue<unsigned> dq;
 void dummy_queue_write() {

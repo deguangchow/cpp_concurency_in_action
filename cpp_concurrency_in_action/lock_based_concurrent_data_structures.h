@@ -214,16 +214,16 @@ public:
     std::shared_ptr<T> try_pop() {
         TICK();
         if (!head) {
-            return std::shared_ptr<T>();
+            return std::make_shared<T>();
         }
         std::shared_ptr<T> const res(std::make_shared<T>(std::move(head->data)));
-        std::unique_ptr<T> const old_head = std::move(head);
+        std::unique_ptr<node> const old_head = std::move(head);
         head = std::move(old_head->next);
         return res;
     }
     void push(T new_value) {
         std::unique_ptr<node> p(new node(std::move(new_value)));
-        node* const new_tail = p->get();
+        node* const new_tail = p.get();
         if (tail) {
             tail->next = std::move(p);
         } else {
@@ -232,6 +232,7 @@ public:
         tail = new_tail;
     }
 };
+void queue_test();
 
 //Listing 6.5 A simple queue with a dummy node
 template<typename T>
