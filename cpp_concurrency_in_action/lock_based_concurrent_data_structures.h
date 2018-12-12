@@ -250,7 +250,7 @@ public:
     dummy_queue& operator=(dummy_queue const &other) = delete;
     std::shared_ptr<T> try_pop() {
         TICK();
-        if (head->get() == tail) {
+        if (head.get() == tail) {
             return std::make_shared<T>();
         }
         std::shared_ptr<T> const res(head->data);
@@ -263,11 +263,14 @@ public:
         std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
         std::unique_ptr<node> p(new node);
         tail->data = new_data;
-        node const *new_tail = p->get();
+        node* const new_tail = p.get();
         tail->next = std::move(p);
         tail = new_tail;
     }
 };
+void dummy_queue_write();
+void dummy_queue_read();
+void dummy_queue_test();
 
 //Listing 6.6 A thread-safe queue with fine-grained locking
 template<typename T>
@@ -291,7 +294,7 @@ private:
     std::unique_ptr<node> pop_head() {
         TICK();
         std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head->get() == tail) {
+        if (head.get() == tail) {
             return nullptr;
         }
         std::unique_ptr<node> old_head = std::move(head);
@@ -303,7 +306,7 @@ private:
         TICK();
         node const *old_tail = get_tail();//Get old tail value outside lock on head_mutex
         std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head->get() == old_tail) {
+        if (head.get() == old_tail) {
             return nullptr;
         }
         std::unique_ptr<node> old_head = std::move(head);
@@ -312,9 +315,8 @@ private:
     }
 #endif
 
-
 public:
-    threadsafe_queue_fine_grained() : head(new node), tail(head->get()) {}
+    threadsafe_queue_fine_grained() : head(new node), tail(head.get()) {}
     threadsafe_queue_fine_grained(threadsafe_queue_fine_grained const &other) = delete;
     threadsafe_queue_fine_grained& operator=(threadsafe_queue_fine_grained const &other) = delete;
     std::shared_ptr<T> try_pop() {
@@ -326,7 +328,7 @@ public:
         TICK();
         std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
         std::unique_ptr<node> p(new node);
-        node const *new_tail = p->get();
+        node* const new_tail = p.get();//Pay more attention to the position of the key-word 'const'.
 
         std::lock_guard<std::mutex> tail_lock(tail_mutex);
         tail->data = new_data;
@@ -334,6 +336,10 @@ public:
         tail = new_tail;
     }
 };
+
+void threadsafe_queue_fine_grained_write();
+void threadsafe_queue_fine_grained_read();
+void threadsafe_queue_fine_grained_test();
 
 
 

@@ -148,5 +148,77 @@ void threadsafe_queue_shared_ptr_test() {
     t6.join();
 }
 
+//Listing 6.5 A simple queue with a dummy node
+dummy_queue<unsigned> dq;
+void dummy_queue_write() {
+    TICK();
+    dq.push(1);
+    dq.push(2);
+    dq.push(3);
+    dq.push(4);
+}
+void dummy_queue_read() {
+    TICK();
+    std::shared_ptr<unsigned> ptr1 = dq.try_pop();
+    std::shared_ptr<unsigned> ptr2 = dq.try_pop();
+    std::shared_ptr<unsigned> ptr3 = dq.try_pop();
+    std::shared_ptr<unsigned> ptr4 = dq.try_pop();
+    INFO("try_pop()=%d", *ptr1);
+    INFO("try_pop()=%d", *ptr2);
+    INFO("try_pop()=%d", *ptr3);
+    INFO("try_pop()=%d", *ptr4);
+}
+void dummy_queue_test() {
+    TICK();
+    std::thread t1(dummy_queue_write);
+    std::thread t2(dummy_queue_write);
+    std::thread t3(dummy_queue_write);
+    std::thread t4(dummy_queue_read);
+    std::thread t5(dummy_queue_read);
+    std::thread t6(dummy_queue_read);
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
+}
+
+//Listing 6.6 A thread-safe queue with fine-grained locking
+threadsafe_queue_fine_grained<unsigned> tsqfg;
+void threadsafe_queue_fine_grained_write() {
+    TICK();
+    tsqfg.push(1);
+    tsqfg.push(2);
+    tsqfg.push(3);
+    tsqfg.push(4);
+}
+void threadsafe_queue_fine_grained_read() {
+    TICK();
+    std::shared_ptr<unsigned> ptr1 = tsqfg.try_pop();
+    std::shared_ptr<unsigned> ptr2 = tsqfg.try_pop();
+    std::shared_ptr<unsigned> ptr3 = tsqfg.try_pop();
+    std::shared_ptr<unsigned> ptr4 = tsqfg.try_pop();
+    INFO("try_pop()=%d", ptr1 ? *ptr1 : -1);//-1 won`t be printed as the function 'try_pop' would return 0 if empty
+    INFO("try_pop()=%d", ptr2 ? *ptr2 : -1);
+    INFO("try_pop()=%d", ptr3 ? *ptr3 : -1);
+    INFO("try_pop()=%d", ptr4 ? *ptr4 : -1);
+}
+void threadsafe_queue_fine_grained_test() {
+    TICK();
+    std::thread t1(threadsafe_queue_fine_grained_write);
+    std::thread t2(threadsafe_queue_fine_grained_write);
+    std::thread t3(threadsafe_queue_fine_grained_write);
+    std::thread t4(threadsafe_queue_fine_grained_read);
+    std::thread t5(threadsafe_queue_fine_grained_read);
+    std::thread t6(threadsafe_queue_fine_grained_read);
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
+}
+
 }//namespace lock_based_conc_data
 
