@@ -269,6 +269,74 @@ public:
     }
 };
 
+//Listing 6.6 A thread-safe queue with fine-grained locking
+template<typename T>
+class threadsafe_queue_fine_grained {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        std::unique_ptr<node> next;
+    };
+    std::mutex head_mutex;
+    std::unique_ptr<node> head;
+    std::mutex tail_mutex;
+    node *tail;
+
+    node* get_tail() {
+        TICK();
+        std::lock_guard<std::mutex> tail_lock(tail_mutex);
+        return tail;
+    }
+#if 1//thead-safe
+    std::unique_ptr<node> pop_head() {
+        TICK();
+        std::lock_guard<std::mutex> head_lock(head_mutex);
+        if (head->get() == tail) {
+            return nullptr;
+        }
+        std::unique_ptr<node> old_head = std::move(head);
+        head = std::move(old_head->next);
+        return old_head;
+    }
+#else//thread-unsafe
+    std::unique_ptr<node> pop_head() {//This is a broken implementation
+        TICK();
+        node const *old_tail = get_tail();//Get old tail value outside lock on head_mutex
+        std::lock_guard<std::mutex> head_lock(head_mutex);
+        if (head->get() == old_tail) {
+            return nullptr;
+        }
+        std::unique_ptr<node> old_head = std::move(head);
+        head = std::move(old_head->next);
+        return old_head;
+    }
+#endif
+
+
+public:
+    threadsafe_queue_fine_grained() : head(new node), tail(head->get()) {}
+    threadsafe_queue_fine_grained(threadsafe_queue_fine_grained const &other) = delete;
+    threadsafe_queue_fine_grained& operator=(threadsafe_queue_fine_grained const &other) = delete;
+    std::shared_ptr<T> try_pop() {
+        TICK();
+        std::unique_ptr<node> old_head = pop_head();
+        return old_head ? old_head->data : std::make_shared<T>();
+    }
+    void push(T new_value) {
+        TICK();
+        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
+        std::unique_ptr<node> p(new node);
+        node const *new_tail = p->get();
+
+        std::lock_guard<std::mutex> tail_lock(tail_mutex);
+        tail->data = new_data;
+        tail->next = std::move(p);
+        tail = new_tail;
+    }
+};
+
+
+
 }//namespace lock_based_conc_data
 
 #endif  //LOCK_BASED_CONCURRENT_DATA_STRUCTURES_H
