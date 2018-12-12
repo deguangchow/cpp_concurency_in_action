@@ -233,6 +233,42 @@ public:
     }
 };
 
+//Listing 6.5 A simple queue with a dummy node
+template<typename T>
+class dummy_queue {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        std::unique_ptr<node> next;
+    };
+    std::unique_ptr<node> head;
+    node *tail;
+
+public:
+    dummy_queue() : head(new node), tail(head.get()) {}
+    dummy_queue(dummy_queue const &other) = delete;
+    dummy_queue& operator=(dummy_queue const &other) = delete;
+    std::shared_ptr<T> try_pop() {
+        TICK();
+        if (head->get() == tail) {
+            return std::make_shared<T>();
+        }
+        std::shared_ptr<T> const res(head->data);
+        std::unique_ptr<node> old_head = std::move(head);
+        head = std::move(old_head->next);
+        return res;
+    }
+    void push(T new_value) {
+        TICK();
+        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
+        std::unique_ptr<node> p(new node);
+        tail->data = new_data;
+        node const *new_tail = p->get();
+        tail->next = std::move(p);
+        tail = new_tail;
+    }
+};
+
 }//namespace lock_based_conc_data
 
 #endif  //LOCK_BASED_CONCURRENT_DATA_STRUCTURES_H
