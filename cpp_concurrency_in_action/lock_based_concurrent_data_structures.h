@@ -430,13 +430,13 @@ public:
         return old_head->data;
 #else
         std::unique_ptr<node> old_head = try_pop_head();
-        return old_head ? old_head->data : std::shared_ptr<T>();
+        return old_head ? old_head->data : std::make_shared<T>();
 #endif
     }
-    std::unique_ptr<node> try_pop(T& value) {
+    bool try_pop(T& value) {
         TICK();
         std::unique_ptr<node> const old_head = try_pop_head(value);
-        return old_head;
+        return old_head ? true : false;
     }
     void push(T new_value) {
         TICK();

@@ -251,21 +251,35 @@ void threadsafe_waiting_queue_write() {
 }
 void threadsafe_waiting_queue_read() {
     TICK();
-#if 0
+#if 0//if empty print 0
     std::shared_ptr<unsigned> ptr1 = tswq.try_pop();
+    INFO("try_pop()=%d", *ptr1);
+
     std::shared_ptr<unsigned> ptr2 = tswq.try_pop();
-#else
+    INFO("try_pop()=%d", *ptr2);
+
+    unsigned u3 = 0;
+    tswq.try_pop(u3);
+    INFO("try_pop(%d)", u3);
+
+    unsigned u4 = 0;
+    tswq.try_pop(u4);
+    INFO("try_pop(%d)", u4);
+#else//if empty wait cv
     std::shared_ptr<unsigned> ptr1 = tswq.wait_and_pop();
+    INFO("wait_and_pop()=%d", *ptr1);
+
     std::shared_ptr<unsigned> ptr2 = tswq.wait_and_pop();
-#endif
-    std::shared_ptr<unsigned> ptr3 = tswq.wait_and_pop();
+    INFO("wait_and_pop()=%d", *ptr2);
+
+    unsigned u3 = 0;
+    tswq.wait_and_pop(u3);
+    INFO("try_pop(%d)", u3);
+
     unsigned u4 = 0;
     tswq.wait_and_pop(u4);
-
-    INFO("try_pop()=%d", *ptr1);
-    INFO("try_pop()=%d", *ptr2);
-    INFO("wait_and_pop()=%d", *ptr3);
-    INFO("try_pop()=%d", u4);
+    INFO("try_pop(%d)", u4);
+#endif
 }
 void threadsafe_waiting_queue_loop() {
     TICK();
@@ -274,24 +288,28 @@ void threadsafe_waiting_queue_loop() {
 void threadsafe_waiting_queue_test() {
     TICK();
     //std::thread t(threadsafe_waiting_queue_loop);
+
     std::thread t1(threadsafe_waiting_queue_write);
     std::thread t2(threadsafe_waiting_queue_write);
     std::thread t3(threadsafe_waiting_queue_write);
     std::thread t4(threadsafe_waiting_queue_write);
+
     std::thread t5(threadsafe_waiting_queue_read);
     std::thread t6(threadsafe_waiting_queue_read);
     std::thread t7(threadsafe_waiting_queue_read);
-    //std::thread t8(threadsafe_waiting_queue_read);
+    std::thread t8(threadsafe_waiting_queue_read);
 
     //t.join();
+
     t1.join();
     t2.join();
     t3.join();
     t4.join();
+
     t5.join();
     t6.join();
     t7.join();
-    //t8.join();
+    t8.join();
 }
 
 }//namespace lock_based_conc_data
