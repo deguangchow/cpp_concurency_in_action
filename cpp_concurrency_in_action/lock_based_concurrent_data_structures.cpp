@@ -312,5 +312,56 @@ void threadsafe_waiting_queue_test() {
     t8.join();
 }
 
+//6.3 Designing more complex lock-based data structures
+//6.3.1 Writing a thread-safe lookup table using locks
+//Listing 6.11 A thread-safe lookup table
+typedef threadsafe_lookup_table<int, int> MAP_I_I;
+MAP_I_I mapII;
+const unsigned &KEY_NUMS = 5;
+void threadsafe_lookup_table_add() {
+    TICK();
+    for (unsigned i = 1; i < KEY_NUMS; ++i) {
+        INFO("%s(%d,%d)", mapII.add_or_update_mapping(i, i * HUNDRED) ? "add" : "update", i, i * HUNDRED);
+    }
+}
+void threadsafe_lookup_table_remove() {
+    TICK();
+    for (unsigned i = 1; i < KEY_NUMS; ++i) {
+        INFO("remove(%d)=%s", i, mapII.remove_mapping(i) ? "true" : "false");
+    }
+}
+void threadsafe_lookup_table_read() {
+    TICK();
+    for (unsigned i = 1; i < KEY_NUMS; ++i) {
+        INFO("read(%d)=%d", i, mapII.value_for(i));
+    }
+}
+void threadsafe_lookup_table_test() {
+    TICK();
+    std::thread t1(threadsafe_lookup_table_add);
+    std::thread t2(threadsafe_lookup_table_add);
+    std::thread t3(threadsafe_lookup_table_add);
+    std::thread t4(threadsafe_lookup_table_add);
+    std::thread t5(threadsafe_lookup_table_read);
+    std::thread t6(threadsafe_lookup_table_read);
+    std::thread t7(threadsafe_lookup_table_read);
+    std::thread t8(threadsafe_lookup_table_read);
+    std::thread t9(threadsafe_lookup_table_remove);
+
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+    t6.join();
+    t7.join();
+    t8.join();
+    t9.join();
+
+#if 0//exist some error in the function 'get_map'
+    mapII.get_map();
+#endif
+}
+
 }//namespace lock_based_conc_data
 

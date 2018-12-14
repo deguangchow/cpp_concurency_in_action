@@ -108,9 +108,10 @@ int main() {
     lock_based_conc_data::queue_test();
     lock_based_conc_data::dummy_queue_test();
     lock_based_conc_data::threadsafe_queue_fine_grained_test();
+    lock_based_conc_data::threadsafe_waiting_queue_test();
 #endif
 
-    lock_based_conc_data::threadsafe_waiting_queue_test();
+    lock_based_conc_data::threadsafe_lookup_table_test();
 
     return 0;
 }
