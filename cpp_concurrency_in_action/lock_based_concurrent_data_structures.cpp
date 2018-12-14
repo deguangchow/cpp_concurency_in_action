@@ -363,5 +363,39 @@ void threadsafe_lookup_table_test() {
 #endif
 }
 
+//6.3.2 Writing a thread-safe list using locks
+//Listing 6.13 A thread-safe list with iteration support
+threadsafe_list<int> tsl;
+void threadsafe_list_write(unsigned const& val) {
+    TICK();
+    for (unsigned i = 1; i < 5; ++i) {
+        tsl.push_front(i*val);
+    }
+}
+void threadsafe_list_read() {
+    TICK();
+    unsigned count = 0;
+    tsl.for_each([&count](unsigned const& item) {INFO("%d", item); ++count; });
+    INFO("read total=%d", count);
+}
+void threadsafe_list_test() {
+    TICK();
+    std::thread t1(threadsafe_list_write, ONE);
+    std::thread t2(threadsafe_list_write, TEN);
+    std::thread t3(threadsafe_list_write, HUNDRED);
+    std::thread t4(threadsafe_list_write, THOUSAND);
+#if 0
+    typedef std::function<void(unsigned)> Func;
+    std::thread read(&threadsafe_list<unsigned>::for_each<Func>, &tsl, [](unsigned item)->void {INFO("%d", item); });
+#else
+    std::thread read(threadsafe_list_read);
+#endif
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    read.join();
+}
+
 }//namespace lock_based_conc_data
 
