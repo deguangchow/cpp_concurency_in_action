@@ -5,10 +5,6 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
     <Filter Include="资源文件">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
@@ -33,6 +29,13 @@
     </Filter>
     <Filter Include="chapter6">
       <UniqueIdentifier>{b94ba8a4-af57-488e-87c4-7ff9c8c8e618}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="chapter7">
+      <UniqueIdentifier>{4173b6ba-b32a-4d31-b765-9ce2a3b1c3a9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +75,9 @@
     <ClInclude Include="lock_based_concurrent_data_structures.h">
       <Filter>chapter6</Filter>
     </ClInclude>
+    <ClInclude Include="lock_free_concurrent_data_structures.h">
+      <Filter>chapter7</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -103,6 +109,9 @@
     </ClCompile>
     <ClCompile Include="lock_based_concurrent_data_structures.cpp">
       <Filter>chapter6</Filter>
+    </ClCompile>
+    <ClCompile Include="lock_free_concurrent_data_structures.cpp">
+      <Filter>chapter7</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
