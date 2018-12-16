@@ -687,6 +687,7 @@ public:
     }
 };
 void threadsafe_list_write(unsigned const& val);
+void threadsafe_list_remove();
 void threadsafe_list_read();
 void threadsafe_list_test();
 
