@@ -71,6 +71,27 @@ void lock_free_shared_ptr_stack_test() {
     }
 }
 
+//7.2.2 Stopping those pesky leaks: managing memory in lock-free data structures
+//Listing 7.4 Reclaiming nodes when no threads are in pop()
+lock_free_reclaim_stack<unsigned> lfrs;
+void lock_free_reclaim_stack_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_reclaim_stack<unsigned>::push, &lfrs, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_reclaim_stack<unsigned>::pop, &lfrs);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        INFO("pop()=%d", *vct_pop_res[i].get());
+    }
+}
+
+//
+
 }//namespace lock_free_conc_data
 
 

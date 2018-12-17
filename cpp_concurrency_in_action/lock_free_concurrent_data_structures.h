@@ -107,6 +107,86 @@ public:
 };
 void lock_free_shared_ptr_stack_test();
 
+//7.2.2 Stopping those pesky leaks: managing memory in lock-free data structures
+//Listing 7.4 Reclaiming nodes when no threads are in pop()
+template<typename T>
+class lock_free_reclaim_stack {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        node* next = nullptr;
+        explicit node(T const& data_) : data(std::make_shared<T>(data_)) {}
+    };
+    std::atomic<node*> head;
+    std::atomic<node*> to_be_deleted;
+    std::atomic<unsigned> threads_in_pop;//Atomic variable
+    static void delete_nodes(node* nodes) {
+        TICK();
+        while (nodes) {
+            node* next = nodes->next;
+            delete nodes;
+            nodes = next;
+        }
+    }
+    void chain_pending_nodes(node* nodes) {
+        TICK();
+        node* last = nodes;
+        while (node* const next = last->next) {//Follow the next pointer chain to the end
+            last = next;
+        }
+        chain_pending_nodes(nodes, last);
+    }
+    void chain_pending_nodes(node* first, node* last) {
+        TICK();
+        last->next = to_be_deleted;
+        //Loop to guarantee that last->next is correct
+        while (!to_be_deleted.compare_exchange_weak(last->next, first)) {
+            WARN("to_be_deleted loop");
+        }
+    }
+    void clain_pending_node(node* n) {
+        TICK();
+        chain_pending_nodes(n, n);
+    }
+    void try_reclaim(node* old_head) {
+        TICK();
+        if (threads_in_pop == 1) {
+            node* nodes_to_delete = to_be_deleted.exchange(nullptr);
+            if (!--threads_in_pop) {
+                delete_nodes(nodes_to_delete);
+            } else if (nodes_to_delete) {
+                chain_pending_nodes(nodes_to_delete);
+            }
+            delete old_head;
+        }
+    }
+
+public:
+    void push(T const& data) {
+        TICK();
+        node* const new_node = new node(data);
+        new_node->next = head.load();
+        while (!head.compare_exchange_weak(new_node->next, new_node)) {
+            WARN("push loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        ++threads_in_pop;//Increase counter before doing anything else
+        node* old_head = head.load();
+        while (old_head && !head.compare_exchange_weak(old_head, old_head->next)) {
+            WARN("pop loop");
+        }
+        std::shared_ptr<T> res(std::make_shared<T>());
+        if (old_head) {
+            res.swap(old_head->data);//Reclaim deleted nodes if you can
+        }
+        try_reclaim(old_head);//Extract data from node rather than copying pointer
+        return res;
+    }
+};
+void lock_free_reclaim_stack_test();
+
 }//namespace lock_free_conc_data
 
 #endif  //LOCK_FREE_CONCURRENT_DATA_STRUCTURES_H
