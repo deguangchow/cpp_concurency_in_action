@@ -31,6 +31,31 @@ void spinlock_mutex_test() {
     t4.join();
 }
 
+//7.2 Example of lock-free data structures
+//7.2.1 Writing a thread-safe stack without locks
+//Listing 7.2 Implementing push() without locks
+lock_free_stack<unsigned> lfs;
+void lock_free_stack_test() {
+    TICK();
+    unsigned const THREAD_NUS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUS);
+    std::vector<std::thread> vct_pop(THREAD_NUS);
+
+    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+        vct_push[i] = std::thread(&lock_free_stack<unsigned>::push, &lfs, i);
+    }
+    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+        unsigned result = -1;
+        vct_pop[i] = std::thread(&lock_free_stack<unsigned>::pop, &lfs, std::ref(result));
+    }
+    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+        vct_push[i].join();
+    }
+    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+        vct_pop[i].join();
+    }
+}
+
 }//namespace lock_free_conc_data
 
 
