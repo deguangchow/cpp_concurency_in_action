@@ -37,22 +37,37 @@ void spinlock_mutex_test() {
 lock_free_stack<unsigned> lfs;
 void lock_free_stack_test() {
     TICK();
-    unsigned const THREAD_NUS = 5;
-    std::vector<std::thread> vct_push(THREAD_NUS);
-    std::vector<std::thread> vct_pop(THREAD_NUS);
+    unsigned const &THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::thread> vct_pop(THREAD_NUMS);
 
-    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_push[i] = std::thread(&lock_free_stack<unsigned>::push, &lfs, i);
-    }
-    for (unsigned i = 0; i < THREAD_NUS; ++i) {
         unsigned result = -1;
         vct_pop[i] = std::thread(&lock_free_stack<unsigned>::pop, &lfs, std::ref(result));
     }
-    for (unsigned i = 0; i < THREAD_NUS; ++i) {
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_push[i].join();
-    }
-    for (unsigned i = 0; i < THREAD_NUS; ++i) {
         vct_pop[i].join();
+    }
+}
+
+//Listing 7.3 A lock-free stack that leaks nodes
+lock_free_shared_ptr_stack<unsigned> lfsps;
+void lock_free_shared_ptr_stack_test() {
+    TICK();
+    unsigned const &THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_shared_ptr_stack<unsigned>::push, &lfsps, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_shared_ptr_stack<unsigned>::pop, &lfsps);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        INFO("pop()=%d", *vct_pop_res[i].get());
     }
 }
 

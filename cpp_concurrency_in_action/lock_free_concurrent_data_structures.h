@@ -74,7 +74,38 @@ public:
 };
 void lock_free_stack_test();
 
+//Listing 7.3 A lock-free stack that leaks nodes
+template<typename T>
+class lock_free_shared_ptr_stack {
+private:
+    struct node {
+        std::shared_ptr<T> data;//Data is now held by pointer
+        node* next = nullptr;
+        //Create std::shared_ptr for newly allocated T
+        explicit node(T const& data_) : data(std::make_shared<T>(data_)) {}
+    };
+    std::atomic<node*> head;
 
+public:
+    void push(T const& data) {
+        TICK();
+        node* const new_node = new node(data);
+        new_node->next = head.load();
+        while (!head.compare_exchange_weak(new_node->next, new_node)) {
+            WARN("push loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        node* old_head = head.load();
+        //Check old_head is not a null pointer before you dereference it
+        while (old_head && !head.compare_exchange_weak(old_head, old_head->next)) {
+            WARN("push loop");
+        }
+        return old_head ? old_head->data : std::make_shared<T>();
+    }
+};
+void lock_free_shared_ptr_stack_test();
 
 }//namespace lock_free_conc_data
 
