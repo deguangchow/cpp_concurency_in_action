@@ -365,7 +365,7 @@ void threadsafe_lookup_table_test() {
 
 //6.3.2 Writing a thread-safe list using locks
 //Listing 6.13 A thread-safe list with iteration support
-threadsafe_list<unsigned> tsl;
+threadsafe_list<unsigned const> tsl;
 void threadsafe_list_write(unsigned const& val) {
     TICK();
     for (unsigned i = 1; i < 5; ++i) {
@@ -401,7 +401,7 @@ void threadsafe_list_test() {
     std::thread t4(threadsafe_list_write, THOUSAND);
 #if 1
     typedef std::function<bool(unsigned const&)> Func;
-    std::thread remove(&threadsafe_list<unsigned>::remove_if<Func>, &tsl, [](unsigned const& item) {
+    std::thread remove(&threadsafe_list<unsigned const>::remove_if<Func>, &tsl, [](unsigned const& item) {
         bool ret = item % 2 == 0;
         if (ret) {
             INFO("remove %d", item);
@@ -413,12 +413,13 @@ void threadsafe_list_test() {
 #endif
 #if 0
     typedef std::function<void(unsigned const&)> Func;
-    std::thread read(&threadsafe_list<unsigned>::for_each<Func>, &tsl, [](unsigned const& item) {INFO("%d", item); });
+    std::thread read(&threadsafe_list<unsigned const>::for_each<Func>,
+        &tsl, [](unsigned const& item) {INFO("%d", item); });
 #else
     std::thread read(threadsafe_list_read);
 #endif
     typedef std::function<bool(unsigned const&)> Func;
-    std::thread find(&threadsafe_list<unsigned>::find_first_if<Func>, &tsl, [](unsigned const& item) {
+    std::thread find(&threadsafe_list<unsigned const>::find_first_if<Func>, &tsl, [](unsigned const& item) {
         if (bool ret = item > 0) {
             INFO("find %d", item);
             return ret;

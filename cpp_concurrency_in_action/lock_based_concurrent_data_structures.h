@@ -618,7 +618,7 @@ class threadsafe_list {
         std::unique_ptr<node> next;
 
         node() : next() {}
-        node(T const& value) : data(std::make_shared<T>(value)) {}
+        explicit node(T const& value) : data(std::make_shared<T>(value)) {}
     };
     node head;
 
@@ -626,7 +626,7 @@ public:
     threadsafe_list() {}
     ~threadsafe_list() {
         TICK();
-        remove_if([](node const&) {return true; });
+        remove_if([](T const &) {return true; });
     }
     threadsafe_list(threadsafe_list const& other) = delete;
     threadsafe_list& operator=(threadsafe_list const& other) = delete;

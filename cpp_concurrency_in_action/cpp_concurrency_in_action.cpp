@@ -15,6 +15,7 @@
 #include "synchronizing_concurrent_operations.h"
 #include "atomic_memery_model_operations.h"
 #include "lock_based_concurrent_data_structures.h"
+#include "lock_free_concurrent_data_structures.h"
 
 int main() {
     TICK();
@@ -117,6 +118,7 @@ int main() {
 
 #endif
 
+    lock_free_conc_data::spinlock_mutex_test();
 
     return 0;
 }
