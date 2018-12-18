@@ -225,6 +225,7 @@ public:
 void lock_free_shared_stack_test();
 
 //Listing 7.10 Pushing a node on a lock-free stack using split reference counts
+//Listing 7.11 Popping a node form a lock-free stack using split reference counts
 template<typename T>
 class lock_free_split_ref_cnt_stack {
 private:
@@ -240,6 +241,19 @@ private:
         explicit node(T const& data_) : data(std::make_shared<T>(data_)), internal_count(0), next(nullptr) {}
     };
     std::atomic<counted_node_ptr*> head;
+    void increase_head_count(counted_node_ptr* old_counter) {
+        TICK();
+        counted_node_ptr* new_counter;
+        do {
+            WARN("do loop");
+            if (nullptr == old_counter) {
+                return;
+            }
+            new_counter = old_counter;
+            ++(new_counter->external_count);
+        } while (!head.compare_exchange_strong(old_counter, new_counter));
+        old_counter->external_count = new_counter->external_count;
+    }
 
 public:
     ~lock_free_split_ref_cnt_stack() {
@@ -258,6 +272,7 @@ public:
             WARN("push loop");
         }
     }
+#if 0
     std::shared_ptr<T> pop() {
         TICK();
         counted_node_ptr* old_head = head.load();
@@ -266,8 +281,49 @@ public:
         }
         return old_head ? old_head->ptr->data : nullptr;
     }
+#else
+    std::shared_ptr<T> pop() {
+        TICK();
+        counted_node_ptr* old_head = head.load();
+        for (;;) {
+            increase_head_count(old_head);
+            node* const ptr = old_head->ptr;
+            if (!ptr) {
+                return std::shared_ptr<T>();
+            }
+            if (!head.compare_exchange_strong(old_head, ptr->next)) {
+                std::shared_ptr<T> res;
+                res.swap(ptr->data);
+
+                int const count_increase = old_head->external_count - 2;
+                if (ptr->internal_count.fetch_add(count_increase) == -count_increase) {
+                    delete ptr;
+                }
+                return res;
+            } else if (ptr->internal_count.fetch_sub(1) == 1) {
+                delete ptr;
+            }
+        }
+    }
+#endif
 };
 void lock_free_split_ref_cnt_stack_test();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }//namespace lock_free_conc_data
 
