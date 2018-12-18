@@ -90,7 +90,25 @@ void lock_free_reclaim_stack_test() {
     }
 }
 
-//
+//7.2.4 Detecting nodes in use with reference counting
+//Listing 7.8 A lock-free stack using a lock-free std::shared_ptr<> implementation
+lock_free_shared_stack<unsigned> lfss;
+void lock_free_shared_stack_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_shared_stack<unsigned>::push, &lfss, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_shared_stack<unsigned>::pop, &lfss);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        INFO("pop()=%d", *vct_pop_res[i].get());
+    }
+}
+
 
 }//namespace lock_free_conc_data
 

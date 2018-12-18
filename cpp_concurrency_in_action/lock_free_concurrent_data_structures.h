@@ -187,6 +187,43 @@ public:
 };
 void lock_free_reclaim_stack_test();
 
+//7.2.3 Detecting nodes that can`t be reclaimed using hazard pointers
+//Listing 7.6 An implementation of pop() using hazard pointers
+//Listing 7.7 A simple implementation of get_hazard_pointer_for_current_thread()
+//Listing 7.8 A simple implementation of the reclaim functions
+
+//7.2.4 Detecting nodes in use with reference counting
+//Listing 7.8 A lock-free stack using a lock-free std::shared_ptr<> implementation
+template<typename T>
+class lock_free_shared_stack {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        std::shared_ptr<node> next;
+        explicit node(T const& data_) : data(std::make_shared<T>(data_)), next(nullptr) {}
+    };
+    std::shared_ptr<node> head;
+
+public:
+    void push(T const& data) {
+        TICK();
+        std::shared_ptr<node> const new_node = std::make_shared<node>(data);
+        new_node->next = std::atomic_load(&head);
+        while (!std::atomic_compare_exchange_weak(&head, &new_node->next, new_node)) {
+            WARN("push loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        std::shared_ptr<node> old_head = std::atomic_load(&head);
+        while (old_head && !std::atomic_compare_exchange_weak(&head, &old_head, old_head->next)) {
+            WARN("pop loop");
+        }
+        return old_head ? old_head->data : std::make_shared<T>();
+    }
+};
+void lock_free_shared_stack_test();
+
 }//namespace lock_free_conc_data
 
 #endif  //LOCK_FREE_CONCURRENT_DATA_STRUCTURES_H
