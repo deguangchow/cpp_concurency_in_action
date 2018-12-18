@@ -109,6 +109,24 @@ void lock_free_shared_stack_test() {
     }
 }
 
+//Listing 7.10 Pushing a node on a lock-free stack using split reference counts
+lock_free_split_ref_cnt_stack<unsigned> lfsrcs;
+void lock_free_split_ref_cnt_stack_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_split_ref_cnt_stack<unsigned>::push, &lfsrcs, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_split_ref_cnt_stack<unsigned>::pop, &lfsrcs);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        std::shared_ptr<unsigned> ptr = vct_pop_res[i].get();
+        INFO("pop()=%d", ptr ? *ptr : -1);
+    }
+}
 
 }//namespace lock_free_conc_data
 

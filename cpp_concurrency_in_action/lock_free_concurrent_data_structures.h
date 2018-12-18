@@ -193,7 +193,7 @@ void lock_free_reclaim_stack_test();
 //Listing 7.8 A simple implementation of the reclaim functions
 
 //7.2.4 Detecting nodes in use with reference counting
-//Listing 7.8 A lock-free stack using a lock-free std::shared_ptr<> implementation
+//Listing 7.9 A lock-free stack using a lock-free std::shared_ptr<> implementation
 template<typename T>
 class lock_free_shared_stack {
 private:
@@ -223,6 +223,51 @@ public:
     }
 };
 void lock_free_shared_stack_test();
+
+//Listing 7.10 Pushing a node on a lock-free stack using split reference counts
+template<typename T>
+class lock_free_split_ref_cnt_stack {
+private:
+    struct node;
+    struct counted_node_ptr {
+        int external_count;
+        node* ptr;
+    };
+    struct node {
+        std::shared_ptr<T> data;
+        std::atomic<int> internal_count;
+        counted_node_ptr* next;
+        explicit node(T const& data_) : data(std::make_shared<T>(data_)), internal_count(0), next(nullptr) {}
+    };
+    std::atomic<counted_node_ptr*> head;
+
+public:
+    ~lock_free_split_ref_cnt_stack() {
+        TICK();
+        while (pop()) {
+            WARN("dtr loop");
+        }
+    }
+    void push(T const& data) {
+        TICK();
+        counted_node_ptr* new_node = new counted_node_ptr();
+        new_node->ptr = new node(data);
+        new_node->external_count = 1;
+        new_node->ptr->next = head.load();
+        while (!head.compare_exchange_weak(new_node->ptr->next, new_node)) {
+            WARN("push loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        counted_node_ptr* old_head = head.load();
+        while (old_head && !head.compare_exchange_weak(old_head, old_head->ptr->next)) {
+            WARN("pop loop");
+        }
+        return old_head ? old_head->ptr->data : nullptr;
+    }
+};
+void lock_free_split_ref_cnt_stack_test();
 
 }//namespace lock_free_conc_data
 

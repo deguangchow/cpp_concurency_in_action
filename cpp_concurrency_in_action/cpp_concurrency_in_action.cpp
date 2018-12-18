@@ -119,9 +119,10 @@ int main() {
     lock_free_conc_data::lock_free_stack_test();
     lock_free_conc_data::lock_free_shared_ptr_stack_test();
     lock_free_conc_data::lock_free_reclaim_stack_test();
+    lock_free_conc_data::lock_free_shared_stack_test();
 #endif
 
-    lock_free_conc_data::lock_free_shared_stack_test();
+    lock_free_conc_data::lock_free_split_ref_cnt_stack_test();
 
     return 0;
 }
