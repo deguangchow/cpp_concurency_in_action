@@ -64,7 +64,7 @@ Tick::Tick(const char* funcname) :fn(funcname), t(0) {
     Prefix[FuncDeep] = ' '; ++FuncDeep;
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     MagentaOnBlack();
-    printf("[CALL  %s]%s[>>]%s\n", unixTime2Str(), Prefix, funcname);
+    printf("[CALL  %s %5d]%s[>>]%s\n", unixTime2Str(), std::this_thread::get_id(), Prefix, funcname);
     DefaultOnBlack();
 #endif //_DEBUG
 }
@@ -77,7 +77,7 @@ Tick::~Tick() {
     {//Pay attention for the namespace of lock_console_log because the call of function 'WARN' using the same mutex!!!
         std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
         WhiteOnBlack();
-        printf("[EXIT  %s]%s[<<]%s[%ld]\n", unixTime2Str(), Prefix, fn, t2 - t);
+        printf("[EXIT  %s %5d]%s[<<]%s[%ld]\n", unixTime2Str(), std::this_thread::get_id(), Prefix, fn, t2 - t);
         DefaultOnBlack();
     }
     Prefix[--FuncDeep] = '\0';
@@ -85,7 +85,7 @@ Tick::~Tick() {
 #if _WIN32
     //printf("%s tick %ld[ms]\n", fn, t2 - t);
     if (t2 - t > 500) {
-        WARN(" !!!Function[%s] block too long, please attention.\n", fn);
+        WARN(" !!!Function[%5s] block too long, please attention.\n", fn);
     }
 #endif
 #endif //_DEBUG
@@ -96,7 +96,7 @@ void Tick::info(char* format, ...) {
     va_start(vl, format);
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     GreenOnBlack();
-    printf("[INFO  %s]%*s", unixTime2Str(), FuncDeep, "");
+    printf("[INFO  %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
@@ -108,7 +108,7 @@ void Tick::debug(char* format, ...) {
     va_start(vl, format);
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     BlueOnBlack();
-    printf("[DEBUG %s]%*s", unixTime2Str(), FuncDeep, "");
+    printf("[DEBUG %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
@@ -120,7 +120,7 @@ void Tick::warn(char* format, ...) {
     va_start(vl, format);
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     YellowOnBlack();
-    printf("[WARN  %s]%*s", unixTime2Str(), FuncDeep, "");
+    printf("[WARN  %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
@@ -132,7 +132,7 @@ void Tick::error(char* format, ...) {
     va_start(vl, format);
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     RedOnBlack();
-    printf("\n[ERROR %s]%*s", unixTime2Str(), FuncDeep, "");
+    printf("\n[ERROR %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);
