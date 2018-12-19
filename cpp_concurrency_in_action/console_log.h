@@ -69,7 +69,8 @@ public:
 #if _WIN32
         tick = time(NULL);
         localtime_s(&tm, &tick);
-        strftime(strTime, sizeof(strTime), "%H:%M:%S", &tm);
+        strftime(strTime, sizeof(strTime), "%M:%S", &tm);
+        //strftime(strTime, sizeof(strTime), "%H:%M:%S", &tm);
         //strftime(strTime, sizeof(strTime), "%Y-%m-%d %H:%M:%S", &tm);
 #endif
         return strTime;
