@@ -148,6 +148,26 @@ void lock_free_memory_split_ref_cnt_stack_test() {
     }
 }
 
+//7.2.6 Writing a thread-safe queue without lock
+//Listing 7.13 A single-producer, single-consumer lock-free queue
+lock_free_queue<unsigned> lfq;
+void lock_free_queue_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_queue<unsigned>::push, &lfq, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_queue<unsigned>::pop, &lfq);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        std::shared_ptr<unsigned> ptr = vct_pop_res[i].get();
+        INFO("pop()=%d", ptr ? *ptr : -1);
+    }
+}
+
 }//namespace lock_free_conc_data
 
 

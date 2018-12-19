@@ -415,6 +415,63 @@ public:
 };
 void lock_free_memory_split_ref_cnt_stack_test();
 
+//7.2.6 Writing a thread-safe queue without lock
+//Listing 7.13 A single-producer, single-consumer lock-free queue
+template<typename T>
+class lock_free_queue {
+private:
+    struct node {
+        std::shared_ptr<T> data;
+        node* next;
+        node() : data(nullptr), next(nullptr) {}
+    };
+    std::atomic<node*> head;
+    std::atomic<node*> tail;
+    node* pop_head() {
+        TICK();
+        node* const old_head = head.load();
+        if (old_head == tail.load()) {
+            return nullptr;
+        }
+        head.store(old_head->next);
+        return old_head;
+    }
+
+public:
+    lock_free_queue() : head(new node), tail(head.load()) {}
+    lock_free_queue(const lock_free_queue& other) = delete;
+    lock_free_queue& operator=(const lock_free_queue& other) = delete;
+    ~lock_free_queue() {
+        TICK();
+        while (node* const old_haed = head.load()) {
+            head.store(old_haed->next);
+            WARN("~lock_free_queue() loop");
+            delete old_haed;
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        node* old_head = pop_head();
+        if (!old_head) {
+            return std::make_shared<T>();
+        }
+        std::shared_ptr<T> const res(old_head->data);
+        delete old_head;
+        old_head = nullptr;
+        return res;
+    }
+    void push(T new_value) {
+        TICK();
+        std::shared_ptr<T> new_data(std::make_shared<T>(new_value));
+        node* p = new node();
+        node* const old_tail = tail.load();
+        old_tail->data.swap(new_data);
+        old_tail->next = p;
+        tail.store(p);
+    }
+};
+void lock_free_queue_test();
+
 }//namespace lock_free_conc_data
 
 #endif  //LOCK_FREE_CONCURRENT_DATA_STRUCTURES_H
