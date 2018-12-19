@@ -128,6 +128,26 @@ void lock_free_split_ref_cnt_stack_test() {
     }
 }
 
+//7.2.5 Appling the memory model to the lock-free stack
+//Listing 7.12 A lock-free stack with reference counting and relaxed atomic operations
+lock_free_memory_split_ref_cnt_stack<unsigned> lfmsrcs;
+void lock_free_memory_split_ref_cnt_stack_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_push(THREAD_NUMS);
+    std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        INFO("push(%d)", i + 1);
+        vct_push[i] = std::thread(&lock_free_memory_split_ref_cnt_stack<unsigned>::push, &lfmsrcs, i + 1);
+        vct_pop_res[i] = std::async(&lock_free_memory_split_ref_cnt_stack<unsigned>::pop, &lfmsrcs);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_push[i].join();
+        std::shared_ptr<unsigned> ptr = vct_pop_res[i].get();
+        INFO("pop()=%d", ptr ? *ptr : -1);
+    }
+}
+
 }//namespace lock_free_conc_data
 
 

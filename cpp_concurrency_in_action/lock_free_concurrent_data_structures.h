@@ -245,7 +245,7 @@ private:
     std::atomic<counted_node_ptr*> head;
 #else//undefining '_ENABLE_ATOMIC_ALIGNMENT_FIX', the 'std::<Type>' can`t be compiled correctly.
     std::atomic<counted_node_ptr> head;
-    void increase_head_count(counted_node_ptr old_counter) {
+    void increase_head_count(counted_node_ptr& old_counter) {
         TICK();
         counted_node_ptr new_counter;
         do {
@@ -313,21 +313,107 @@ public:
 };
 void lock_free_split_ref_cnt_stack_test();
 
+//7.2.5 Appling the memory model to the lock-free stack
+//Listing 7.12 A lock-free stack with reference counting and relaxed atomic operations
+template<typename T>
+class lock_free_memory_split_ref_cnt_stack {
+private:
+    struct node;
+    struct counted_node_ptr {
+        int external_count;
+        node* ptr;
+    };
+    struct node {
+        std::shared_ptr<T> data;
+        std::atomic<int> intrenal_count;
+        counted_node_ptr* next;
+        explicit node(T const& data_) : data(std::make_shared<T>(data_)), intrenal_count(0), next(nullptr) {}
+    };
+#if 1
+    std::atomic<counted_node_ptr*> head;
+#else
+    std::atomic<counted_node_ptr> head;
+    void increase_head_count(counted_node_ptr& old_counter) {
+        TICK();
+        counted_node_ptr new_counter;
+        do {
+            WARN("increase_head_count() loop");
+            new_counter = old_counter;
+            ++new_counter.external_count;
+        } while (!head.compare_exchange_strong(old_counter, new_counter,
+            std::memory_order_acquire, memory_order_relaxed));
+        old_counter.external_count = new_counter.external_count;
+    }
+#endif
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+public:
+    ~lock_free_memory_split_ref_cnt_stack() {
+        TICK();
+        while (pop()) {
+            WARN("~lock_free_memory_split_ref_cnt_stack() loop");
+        }
+    }
+#if 1
+    void push(T const& data) {
+        TICK();
+        counted_node_ptr* new_node = new counted_node_ptr();
+        new_node->ptr = new node(data);
+        new_node->external_count = 1;
+        new_node->ptr->next = head.load(std::memory_order_relaxed);
+        while (!head.compare_exchange_weak(new_node->ptr->next, new_node,
+            std::memory_order_release, std::memory_order_relaxed)) {
+            WARN("push() loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        counted_node_ptr* old_head = head.load();
+        while (old_head && !head.compare_exchange_weak(old_head, old_head->ptr->next)) {
+            WARN("pop() loop");
+        }
+        return old_head ? old_head->ptr->data : nullptr;
+    }
+#else
+    void push(T const& data) {
+        TICK();
+        counted_node_ptr new_node;
+        new_node.ptr = new node(data);
+        new_node.external_count = 1;
+        new_node.ptr->next = head.load(std::memory_order_relaxed);
+        while (!head.compare_exchange_weak(new_node.ptr->next, &new_node,
+            std::memory_order_release, std::memory_order_relaxed)) {
+            WARN("push() loop");
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        counted_node_ptr old_head = head.load(std::memory_order_acq_rel);
+        for (;;) {
+            WARN("pop() loop");
+            increase_head_count(old_head);
+            node* const ptr = old_head.ptr;
+            if (!ptr) {
+                WARN("ptr(nullptr)");
+                return std::shared_ptr<T>();
+            }
+            if (head.compare_exchange_strong(old_head, ptr->next, std::memory_order_relaxed)) {
+                std::shared_ptr<T> res;
+                res.swap(ptr->data);
+                int const count_increase = old_head.external_count - 2;
+                if (ptr->intrenal_count.fetch_add(count_increase, std::memory_order_release) == -count_increase) {
+                    delete ptr;
+                }
+                return res;
+            } else if (ptr->intrenal_count.fetch_add(-1, std::memory_order_relaxed) == 1) {
+                ptr->intrenal_count.load(std::memory_order_acquire);
+                delete ptr;
+            }
+        }
+    }
+#endif
+};
+void lock_free_memory_split_ref_cnt_stack_test();
 
 }//namespace lock_free_conc_data
 
