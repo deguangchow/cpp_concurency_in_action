@@ -472,6 +472,86 @@ public:
 };
 void lock_free_queue_test();
 
+//Listing 7.14 A (broken) first attempt at revising push()
+
+//Listing 7.15 Implementating push() for a lock-free queue with a reference-counted tail
+template<typename T>
+class lock_free_ref_cnt_queue {
+private:
+    struct node;
+    struct counted_node_ptr {
+        int external_count;
+        node* ptr;
+    };
+    std::atomic<counted_node_ptr> head;
+    std::atomic<counted_node_ptr> tail;
+    struct node_counter {
+        unsigned internal_count : 30;
+        unsigned external_counters : 2;
+    };
+    struct node {
+        std::atomic<T*> data;
+        std::atomic<node_counter> count;
+        counted_node_ptr next;
+        node() {
+            TICK();
+            node_counter new_count;
+            new_count.internal_count = 0;
+            new_count.external_counters = 2;
+            count.store(new_count);
+        }
+        void release_ref() {
+            TICK();
+        }
+    };
+    static void increase_external_count(std::atomic<counted_node_ptr>& counter, counted_node_ptr& old_counter) {
+        TICK();
+        counted_node_ptr new_counter;
+        do {
+        } while (!counter.compare_exchange_strong(old_counter, new_counter,
+            std::memory_order_acquire, std::memory_order_relaxed));
+        old_counter.external_count = new_counter.external_count;
+    }
+
+public:
+    void push(T new_value) {
+        TICK();
+        std::unique_ptr<T> new_data(new T(new_value));
+        counted_node_ptr new_next;
+        new_next.ptr = new node;
+        new_next.external_count = 1;
+        counted_node_ptr old_tail = tail.load();
+        for (;;) {
+            WARN("push loop");
+            increase_external_count(head, old_tail);
+
+            T* old_data = nullptr;
+            if (old_tail.ptr->data.compare_exchange_strong(old_data, new_data.get())) {
+                old_tail.ptr->next = new_next;
+                old_tail = tail.exchange(new_next);
+                free_external_counter(old_tail);
+                new_data.release();
+                break;
+            }
+            old_tail.ptr->release_ref();
+        }
+    }
+    std::shared_ptr<T> pop() {
+        TICK();
+        counted_node_ptr old_head = head.load(std::memory_order_relaxed);
+        for (;;) {
+            WARN("pop loop");
+            increase_external_count(head, old_head);
+            node* const ptr = old_head.ptr;
+            if (ptr == tail.load().ptr) {
+                ptr->release_ref();
+
+
+            }
+        }
+    }
+};
+
 }//namespace lock_free_conc_data
 
 #endif  //LOCK_FREE_CONCURRENT_DATA_STRUCTURES_H
