@@ -16,6 +16,7 @@
 #include "atomic_memery_model_operations.h"
 #include "lock_based_concurrent_data_structures.h"
 #include "lock_free_concurrent_data_structures.h"
+#include "designing_concurrent_code.h"
 
 int main() {
     TICK();
@@ -122,9 +123,14 @@ int main() {
     lock_free_conc_data::lock_free_shared_stack_test();
     lock_free_conc_data::lock_free_split_ref_cnt_stack_test();
     lock_free_conc_data::lock_free_memory_split_ref_cnt_stack_test();
+    lock_free_conc_data::lock_free_queue_test();
 #endif
 
-    lock_free_conc_data::lock_free_queue_test();
+#if 0//chapter8
+
+#endif
+
+    design_conc_code::parallel_quick_sort_test();
 
     return 0;
 }

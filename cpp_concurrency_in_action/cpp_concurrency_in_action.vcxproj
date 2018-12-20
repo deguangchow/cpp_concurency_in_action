@@ -149,6 +149,7 @@
     <ClInclude Include="common_def.h" />
     <ClInclude Include="common_fun.h" />
     <ClInclude Include="console_log.h" />
+    <ClInclude Include="designing_concurrent_code.h" />
     <ClInclude Include="lock_based_concurrent_data_structures.h" />
     <ClInclude Include="lock_free_concurrent_data_structures.h" />
     <ClInclude Include="stdafx.h" />
@@ -163,6 +164,7 @@
     <ClCompile Include="common_fun.cpp" />
     <ClCompile Include="cpp_concurrency_in_action.cpp" />
     <ClCompile Include="console_log.cpp" />
+    <ClCompile Include="designing_concurrent_code.cpp" />
     <ClCompile Include="lock_based_concurrent_data_structures.cpp" />
     <ClCompile Include="lock_free_concurrent_data_structures.cpp" />
     <ClCompile Include="stdafx.cpp">

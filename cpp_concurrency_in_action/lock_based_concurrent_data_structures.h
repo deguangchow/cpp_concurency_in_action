@@ -46,7 +46,11 @@ public:
         TICK();
         std::lock_guard<std::mutex> lock(m);
         if (data.empty()) {
+#if 0
             throw empty_stack();
+#else
+            return nullptr;
+#endif
         }
         std::shared_ptr<T> const res(std::make_shared<T>(std::move(data.top())));
         data.pop();

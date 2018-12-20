@@ -37,6 +37,9 @@
     <Filter Include="chapter7">
       <UniqueIdentifier>{4173b6ba-b32a-4d31-b765-9ce2a3b1c3a9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter8">
+      <UniqueIdentifier>{30fd4006-9f3d-4df9-9287-4454b4e24654}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -78,6 +81,9 @@
     <ClInclude Include="lock_free_concurrent_data_structures.h">
       <Filter>chapter7</Filter>
     </ClInclude>
+    <ClInclude Include="designing_concurrent_code.h">
+      <Filter>chapter8</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -112,6 +118,9 @@
     </ClCompile>
     <ClCompile Include="lock_free_concurrent_data_structures.cpp">
       <Filter>chapter7</Filter>
+    </ClCompile>
+    <ClCompile Include="designing_concurrent_code.cpp">
+      <Filter>chapter8</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
