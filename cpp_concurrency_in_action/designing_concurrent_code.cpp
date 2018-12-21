@@ -187,5 +187,70 @@ void parallel_accumulate_async_test() {
     INFO("ret=%d\r\n", ret);
 }
 
+//8.4.4 Improving responsiveness with concurrency
+//Listing 8.6 Separating GUI thread from task thread
+std::thread task_thread;
+std::atomic<bool> task_canceled(false);
+design_conc_code::event_data get_event() {
+    TICK();
+    return event_data();
+}
+void display_results() {
+    TICK();
+}
+void process(event_data const& event) {
+    TICK();
+    switch (event.type) {
+    case event_data::start_task:
+        task_canceled = false;
+        task_thread = std::thread(task);
+        break;
+    case event_data::stop_task:
+        task_canceled = true;
+        task_thread.join();
+        break;
+    case event_data::task_complete:
+        task_thread.join();
+        display_results();
+        break;
+    default:
+        break;
+    }
+}
+void gui_thread() {
+    TICK();
+    while (true) {
+        event_data event = get_event();
+        if (event.type == event_data::quit) {
+            break;
+        }
+        process(event);
+    }
+}
+bool task_complete() {
+    TICK();
+    return true;
+}
+void do_next_operation() {
+    TICK();
+}
+void perform_cleanup() {
+    TICK();
+}
+void post_gui_event(event_data::event_type const& type) {
+    TICK();
+}
+void task() {
+    TICK();
+    while (!task_complete() && !task_canceled) {
+        do_next_operation();
+    }
+    if (task_canceled) {
+        perform_cleanup();
+    } else {
+        post_gui_event(event_data::task_complete);
+    }
+}
+
 }//namespace design_conc_code
 

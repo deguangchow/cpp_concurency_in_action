@@ -276,6 +276,31 @@ T parallel_accumulate_async(Iterator first, Iterator last, T init) {
 }
 void parallel_accumulate_async_test();
 
+//8.4.2 Scalability and Amdahl`s law
+
+//8.4.3 Hiding latenct with multiple threads
+
+//8.4.4 Improving responsiveness with concurrency
+//Listing 8.6 Separating GUI thread from task thread
+struct event_data {
+    enum event_type {
+        start_task,
+        stop_task,
+        task_complete,
+        quit
+    };
+    event_type type;
+    event_data() : type(start_task) {}
+};
+event_data get_event();
+void process(event_data const& event);
+void gui_thread();
+bool task_complete();
+void do_next_operation();
+void perform_cleanup();
+void post_gui_event(event_data::event_type const& type);
+void task();
+
 }//namespace design_conc_code
 
 #endif  //DESIGNING_CONCURRENT_CODE_H
