@@ -279,5 +279,24 @@ void parallel_for_each_async_test() {
     parallel_for_each_async(vct.begin(), vct.end(), [](unsigned const& val) {INFO("%d", val); });
 }
 
+//8.5.2 A parallel implementation of std::find
+//Listing 8.9 An implementation of a parallel find algorithm
+void parallel_find_test() {
+    TICK();
+    std::vector<unsigned> vct {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+    };
+    unsigned match = 8;
+#if 0
+    match = 88;
+#endif
+    std::vector<unsigned>::iterator pos = parallel_find(vct.begin(), vct.end(), match);
+    if (pos != vct.end()) {
+        INFO("find");
+    } else {
+        INFO("not find");
+    }
+}
+
 }//namespace design_conc_code
 

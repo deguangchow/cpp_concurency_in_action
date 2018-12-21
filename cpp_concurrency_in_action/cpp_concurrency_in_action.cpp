@@ -135,9 +135,10 @@ int main() {
     design_conc_code::parallel_accumulate_join_test();
     design_conc_code::parallel_accumulate_async_test();
     design_conc_code::parallel_for_each_test();
+    design_conc_code::parallel_for_each_async_test();
 #endif
 
-    design_conc_code::parallel_for_each_async_test();
+    design_conc_code::parallel_find_test();
 
     return 0;
 }
