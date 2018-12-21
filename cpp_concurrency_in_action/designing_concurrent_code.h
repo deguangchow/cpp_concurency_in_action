@@ -257,6 +257,24 @@ T parallel_accumulate_join(Iterator first, Iterator last, T init) {
 }
 void parallel_accumulate_join_test();
 
+//Listing 8.5 An exception-safe parallel version of std::accumulate using std::async
+template<typename Iterator, typename T>
+T parallel_accumulate_async(Iterator first, Iterator last, T init) {
+    TICK();
+    unsigned long const length = std::distance(first, last);
+    unsigned long const max_chunk_size = 25;
+    if (length <= max_chunk_size) {
+        return std::accumulate(first, last, init);
+    } else {
+        Iterator mid_point = first;
+        std::advance(mid_point, length / 2);
+        std::future<T> first_half_result = std::async(&parallel_accumulate_async<Iterator, T>, first, mid_point, init);
+        T second_half_result = parallel_accumulate_async(mid_point, last, T());
+        INFO("second_half_result=%d", second_half_result);
+        return first_half_result.get() + second_half_result;
+    }
+}
+void parallel_accumulate_async_test();
 
 }//namespace design_conc_code
 

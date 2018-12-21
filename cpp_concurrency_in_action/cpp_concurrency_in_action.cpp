@@ -132,9 +132,10 @@ int main() {
     design_conc_code::processing_loop_with_mutex_test();
     design_conc_code::processing_loop_protect_test();
     design_conc_code::parallel_accumulate_test();
+    design_conc_code::parallel_accumulate_join_test();
 #endif
 
-    design_conc_code::parallel_accumulate_join_test();
+    design_conc_code::parallel_accumulate_async_test();
 
     return 0;
 }
