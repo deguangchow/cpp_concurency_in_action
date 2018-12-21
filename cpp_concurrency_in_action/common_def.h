@@ -33,5 +33,7 @@ static const unsigned THREAD_NUM_64                 = 64;           //线程数�
 static const unsigned THREAD_NUM_128                = 128;          //线程数：128
 
 static const double PI                              = 3.1415926;    //π
+
+static const unsigned long CACHE_LINE               = 65536;        //cache里缓存的最小单位，可能是32、64或128字节
 #endif  //COMMON_DEF_H
 

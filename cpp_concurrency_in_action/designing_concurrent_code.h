@@ -117,8 +117,34 @@ void processing_loop_with_mutex_test();
 
 //8.2.4 How close is your data?
 //8.2.5 Oversubscription and excessive task switching
+typedef unsigned my_data;
 
 //8.3 Designing data structures for multithreaded performance
+//8.3.1 Dividing array elements for complex operations
+//8.3.2 Data access patterns in other data structures
+#if 1
+struct protected_data {
+    std::mutex m;
+    char padding[CACHE_LINE];//65536 bytes is orders of magnitude larger than a cache line
+    my_data data_to_protect;
+};
+#else
+typedef unsigned data_item1;
+typedef unsigned data_item2;
+struct my_data {
+    data_item1 d1;
+    data_item2 d2;
+    char padding[CACHE_LINE];
+};
+my_data some_array[256];
+#endif
+void processing_loop_protect();
+void processing_loop_protect_test();
+
+//8.4 Additional considerations when designing for concurrency
+//8.4.1 Exception safety in parallel algorithms
+//Listing 8.2 A naive parallel version of std::accumulate(from listing 2.8)
+
 
 }//namespace design_conc_code
 

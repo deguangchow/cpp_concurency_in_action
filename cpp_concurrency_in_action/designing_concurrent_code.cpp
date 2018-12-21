@@ -68,7 +68,6 @@ void processing_loop_test() {
 }
 
 std::mutex m;
-typedef unsigned my_data;
 my_data data;
 bool done_processing(my_data const& data) {
     TICK();
@@ -94,6 +93,41 @@ void processing_loop_with_mutex_test() {
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_pro[i].join();
     }
+}
+
+//8.3 Designing data structures for multithreaded performance
+//8.3.1 Dividing array elements for complex operations
+//8.3.2 Data access patterns in other data structures
+protected_data p_data;
+bool done_processing(protected_data const& data) {
+    TICK();
+    return true;
+}
+void processing_loop_protect() {
+    TICK();
+    while (true) {
+        WARN("processing_loop_protect_test() loop");
+        std::lock_guard<std::mutex> lock(p_data.m);
+        if (done_processing(p_data)) {
+            break;
+        }
+    }
+}
+void processing_loop_protect_test() {
+    TICK();
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_pro(THREAD_NUMS);
+#if 0
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_pro[i] = std::thread(&processing_loop_protect);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_pro[i].join();
+    }
+#else
+    std::for_each(vct_pro.begin(), vct_pro.end(), [](std::thread &t) {t = std::thread(&processing_loop_protect); });
+    std::for_each(vct_pro.begin(), vct_pro.end(), std::mem_fn(&std::thread::join));
+#endif
 }
 
 }//namespace design_conc_code
