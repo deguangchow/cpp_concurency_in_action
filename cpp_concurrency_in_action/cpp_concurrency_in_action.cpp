@@ -130,9 +130,10 @@ int main() {
     design_conc_code::parallel_quick_sort_test();
     design_conc_code::processing_loop_test();
     design_conc_code::processing_loop_with_mutex_test();
+    design_conc_code::processing_loop_protect_test();
 #endif
 
-    design_conc_code::processing_loop_protect_test();
+    design_conc_code::parallel_accumulate_test();
 
     return 0;
 }
