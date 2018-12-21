@@ -499,6 +499,7 @@ private:
             new_count.internal_count = 0;
             new_count.external_counters = 2;
             count.store(new_count);
+            next = nullptr;
         }
         void release_ref() {
             TICK();
@@ -545,8 +546,6 @@ public:
             node* const ptr = old_head.ptr;
             if (ptr == tail.load().ptr) {
                 ptr->release_ref();
-
-
             }
         }
     }

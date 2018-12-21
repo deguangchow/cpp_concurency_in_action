@@ -102,6 +102,24 @@ std::list<T> parallel_quick_sort(std::list<T> input) {
 }
 void parallel_quick_sort_test();
 
+//8.1.3 Dividing work by task type
+
+//8.2 Factors affecting the performance of concurrent code
+//8.2.1 How many processors?
+//8.2.2 Data contention and cache ping-pang
+void processing_loop();
+void processing_loop_test();
+
+void processing_loop_with_mutex();
+void processing_loop_with_mutex_test();
+
+//8.2.3 False sharing
+
+//8.2.4 How close is your data?
+//8.2.5 Oversubscription and excessive task switching
+
+//8.3 Designing data structures for multithreaded performance
+
 }//namespace design_conc_code
 
 #endif  //DESIGNING_CONCURRENT_CODE_H

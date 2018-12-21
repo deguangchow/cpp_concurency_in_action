@@ -127,10 +127,11 @@ int main() {
 #endif
 
 #if 0//chapter8
-
+    design_conc_code::parallel_quick_sort_test();
+    design_conc_code::processing_loop_test();
 #endif
 
-    design_conc_code::parallel_quick_sort_test();
+    design_conc_code::processing_loop_with_mutex_test();
 
     return 0;
 }
