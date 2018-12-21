@@ -298,5 +298,24 @@ void parallel_find_test() {
     }
 }
 
+//Listing 8.10 An implementation of a parallel find algorithm using std::async
+void parallel_find_async_test() {
+    TICK();
+    std::vector<unsigned> vct {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+    };
+    unsigned match = 8;
+#if 0
+    match = 88;
+#endif
+    std::atomic<bool> done(false);
+    std::vector<unsigned>::iterator pos = parallel_find_async(vct.begin(), vct.end(), match, done);
+    if (pos != vct.end()) {
+        INFO("find");
+    } else {
+        INFO("not find");
+    }
+}
+
 }//namespace design_conc_code
 

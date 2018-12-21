@@ -411,6 +411,34 @@ Iterator parallel_find(Iterator first, Iterator last, MatchType match) {
 }
 void parallel_find_test();
 
+//Listing 8.10 An implementation of a parallel find algorithm using std::async
+template<typename Iterator, typename MatchType>
+Iterator parallel_find_async(Iterator first, Iterator last, MatchType match, std::atomic<bool>& done) {
+    try {
+        unsigned long const length = std::distance(first, last);
+        unsigned long const min_per_thread = 25;
+        if (length < (2 * min_per_thread)) {
+            for (; (first != last) && !done.load(); ++first) {
+                if (*first == match) {
+                    done = true;
+                    return first;
+                }
+            }
+            return last;
+        } else {
+            Iterator const mid_point = first + (length / 2);
+            std::future<Iterator> async_result = std::async(&parallel_find_async<Iterator, MatchType>,
+                mid_point, last, match, std::ref(done));
+            Iterator const direct_result = parallel_find_async(first, mid_point, match, done);
+            return (direct_result == mid_point) ? async_result.get() : direct_result;
+        }
+    } catch (...) {
+        done = true;
+        throw;
+    }
+}
+void parallel_find_async_test();
+
 }//namespace design_conc_code
 
 #endif  //DESIGNING_CONCURRENT_CODE_H
