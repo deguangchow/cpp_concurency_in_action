@@ -170,17 +170,28 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     std::vector<std::thread> threads(num_threads - 1);
 
     Iterator block_start = first;
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        Iterator block_end = block_start;
-        std::advance(block_end, block_size);
-        std::packaged_task<T(Iterator, Iterator)> task((accumulate_block<Iterator, T>()));//be careful about the ()!!!
-        futures[i] = task.get_future();
-        threads[i] = std::thread(std::move(task), block_start, block_end);
-        block_start = block_end;
-    }
-    T last_result = accumulate_block<Iterator, T>()(block_start, last);
+    T last_result;
+    try {
+        for (unsigned long i = 0; i < (num_threads - 1); ++i) {
+            Iterator block_end = block_start;
+            std::advance(block_end, block_size);
+            //be careful about the ()!!!
+            std::packaged_task<T(Iterator, Iterator)> task((accumulate_block<Iterator, T>()));
+            futures[i] = task.get_future();
+            threads[i] = std::thread(std::move(task), block_start, block_end);
+            block_start = block_end;
+        }
+        last_result = accumulate_block<Iterator, T>()(block_start, last);
 
-    std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+        std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+    }
+    catch (...) {
+        for (unsigned i = 0; i < (num_threads - 1); ++i) {
+            if (threads[i].joinable()) {
+                threads[i].join();
+            }
+        }
+    }
 
     T result = init;
     for (unsigned long i = 0; i < (num_threads - 1); ++i) {
