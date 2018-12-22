@@ -140,6 +140,40 @@ public:
 };
 void thread_pool_test();
 
+//Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
+template<typename Iterator, typename T>
+T parallel_accumulate(Iterator first, Iterator last, T init) {
+    TICK();
+    unsigned long const length = std::distance(first, last);
+    if (!length) {
+        return init;
+    }
+    unsigned long const block_size = 25;
+    unsigned long const num_blocks = (length + block_size - 1) / block_size;
+
+    std::vector<std::future<T>> futures(num_blocks - 1);
+    thread_pool pool;
+    Iterator block_start = first;
+    for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
+        Iterator block_end = block_start;
+        std::advance(block_end, block_size);
+        //typedef typename std::result_of<FunctionType()>::type result_type;
+        typedef typename std::packaged_task<T(Iterator, Iterator)> Func;
+        Func task((design_conc_code::accumulate_block<Iterator, T>()));
+
+        futures[i] = pool.submit<Func>(task);
+        block_start = block_end;
+    }
+    T last_result = design_conc_code::accumulate_block<Iterator, T>()(block_start, last);
+    T result = init;
+    for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
+        result += futures[i].get();
+    }
+    result += last_result;
+    return result;
+}
+void parallel_accumulate_test();
+
 }//namespace adv_thread_mg
 
 #endif  //ADVANCED_THREAD_MANAGEMENT_H
