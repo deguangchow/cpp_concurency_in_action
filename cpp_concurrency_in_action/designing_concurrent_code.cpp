@@ -317,7 +317,8 @@ void parallel_find_async_test() {
     }
 }
 
-//Listing 8.10 An implementation of a parallel find algorithm using std::async
+//8.5.3 A parallel implementation of std::partial_sum
+//Listing 8.11 Calculating partial sums in parallel by dividing the problem
 void parallel_partial_sum_test() {
     TICK();
     std::vector<unsigned> vct = {
@@ -333,6 +334,29 @@ void parallel_partial_sum_test() {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     };
     parallel_partial_sum(vct.begin(), vct.end());
+    for (unsigned long i = 0; i < vct.size(); ++i) {
+        INFO("%d=%d", i, vct[i]);
+    }
+}
+
+//Listing 8.12 A simple barrier class
+//Listing 8.13 A parallel implementation of partial_sum by pairwise updates
+void parallel_partial_sum_pairwise_test()
+{
+    TICK();
+    std::vector<unsigned> vct = {
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    };
+    parallel_partial_sum_pairwise(vct.begin(), vct.end());
     for (unsigned long i = 0; i < vct.size(); ++i) {
         INFO("%d=%d", i, vct[i]);
     }
