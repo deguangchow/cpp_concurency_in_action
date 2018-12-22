@@ -341,8 +341,7 @@ void parallel_partial_sum_test() {
 
 //Listing 8.12 A simple barrier class
 //Listing 8.13 A parallel implementation of partial_sum by pairwise updates
-void parallel_partial_sum_pairwise_test()
-{
+void parallel_partial_sum_pairwise_test() {
     TICK();
     std::vector<unsigned> vct = {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,

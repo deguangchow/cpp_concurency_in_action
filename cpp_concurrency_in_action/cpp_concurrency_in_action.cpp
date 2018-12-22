@@ -17,6 +17,7 @@
 #include "lock_based_concurrent_data_structures.h"
 #include "lock_free_concurrent_data_structures.h"
 #include "designing_concurrent_code.h"
+#include "advanced_thread_management.h"
 
 int main() {
     TICK();
@@ -138,9 +139,14 @@ int main() {
     design_conc_code::parallel_for_each_async_test();
     design_conc_code::parallel_find_test();
     design_conc_code::parallel_find_async_test();
+    design_conc_code::parallel_partial_sum_test();
 #endif
 
-    design_conc_code::parallel_partial_sum_test();
+#if 0//chapter9
+
+#endif
+
+    adv_thread_mg::simple_thread_pool_test();
 
     return 0;
 }

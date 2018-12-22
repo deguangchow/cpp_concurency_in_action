@@ -40,6 +40,9 @@
     <Filter Include="chapter8">
       <UniqueIdentifier>{30fd4006-9f3d-4df9-9287-4454b4e24654}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter9">
+      <UniqueIdentifier>{3f0e9bff-e7af-48cc-a7c6-c0c02d3109ab}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -84,6 +87,9 @@
     <ClInclude Include="designing_concurrent_code.h">
       <Filter>chapter8</Filter>
     </ClInclude>
+    <ClInclude Include="advanced_thread_management.h">
+      <Filter>chapter9</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -121,6 +127,9 @@
     </ClCompile>
     <ClCompile Include="designing_concurrent_code.cpp">
       <Filter>chapter8</Filter>
+    </ClCompile>
+    <ClCompile Include="advanced_thread_management.cpp">
+      <Filter>chapter9</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

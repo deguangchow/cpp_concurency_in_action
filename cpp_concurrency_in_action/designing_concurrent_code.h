@@ -589,7 +589,7 @@ void parallel_partial_sum_pairwise(Iterator first, Iterator last) {
 
     std::vector<std::thread> threads(length - 1);
     join_threads joiner(threads);
-    
+
     Iterator block_start = first;
     for (unsigned long i = 0; i < (length - 1); ++i) {
         threads[i] = std::thread(process_element(), first, last, std::ref(buffer), i, std::ref(b));
