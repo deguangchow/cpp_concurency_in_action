@@ -143,10 +143,10 @@ int main() {
 #endif
 
 #if 0//chapter9
-
+    adv_thread_mg::simple_thread_pool_test();
 #endif
 
-    adv_thread_mg::simple_thread_pool_test();
+    adv_thread_mg::thread_pool_test();
 
     return 0;
 }

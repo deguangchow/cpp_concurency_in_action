@@ -40,5 +40,22 @@ void simple_thread_pool_test() {
     stp.submit([] {TICK(); INFO("task6"); });
 }
 
+//9.1.2 Waiting for tasks submitted to a thread pool
+//Listing 9.2 A thread pool with waitable tasks
+void thread_pool_test() {
+    TICK();
+    thread_pool tp;
+    unsigned const& THREAD_NUMS = 5;
+    std::vector<std::thread> vct_submit(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        typedef std::function<void()> Func;
+        vct_submit[i] = std::thread(&thread_pool::submit<Func>, &tp, task1);
+        std::async(&thread_pool::submit<Func>, &tp, task2);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vct_submit[i].join();
+    }
+}
+
 }//namespace adv_thread_mg
 
