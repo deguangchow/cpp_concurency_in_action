@@ -17,6 +17,8 @@ namespace adv_thread_mg {
 //9.1 Thread pools
 //9.1.1 The simplest posible thread pool
 //Listing 9.1 Simple thread pool
+void task1();
+void task2();
 class simple_thread_pool {
     std::atomic_bool done;
     lock_based_conc_data::threadsafe_queue_shared_ptr<std::function<void()>> work_queue;
@@ -68,13 +70,15 @@ class function_wrapper {
         virtual ~impl_base() {}
     };
     std::unique_ptr<impl_base> impl;
-    template<typename F>
+    template<typename F, typename...Args>
     struct impl_type : impl_base {
         F f;
-        explicit impl_type(F&& f_) : f(std::move(f_)) {}
+        explicit impl_type(F&& f_, Args&&...args_) : f(std::move<F(Args...)>(f_(args_...))) {}
         void call() {
             TICK();
-            f();
+            using result_type = std::result_of<F(Args...)>::type;
+            std::packaged_task<result_type(Args...)> task(std::move(f));
+            task();
         }
     };
 
@@ -127,12 +131,12 @@ public:
         TICK();
         done = true;
     }
-    template<typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f) {
+    template<typename F, typename...Args>
+    std::future<typename std::result_of<F(Args...)>::type> submit(F&& f, Args&&...args) {
         TICK();
-        typedef typename std::result_of<FunctionType()>::type result_type;
+        typedef typename std::result_of<F(Args...)>::type result_type;
 
-        std::packaged_task<result_type()> task(std::move(f));
+        std::packaged_task<result_type(Args...)> task(std::move(f));
         std::future<result_type> res(task.get_future());
         work_queue.push(function_wrapper(std::move(task)));
         return res;
@@ -141,6 +145,12 @@ public:
 void thread_pool_test();
 
 //Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
+int task3(int a, int b);
+template<typename Iterator, typename T>
+T task4(Iterator first, Iterator last) {
+    TICK();
+    return std::accumulate(first, last, T());
+}
 template<typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
@@ -157,11 +167,17 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
         Iterator block_end = block_start;
         std::advance(block_end, block_size);
-        //typedef typename std::result_of<FunctionType()>::type result_type;
-        typedef typename std::packaged_task<T(Iterator, Iterator)> Func;
-        Func task((design_conc_code::accumulate_block<Iterator, T>()));
 
-        futures[i] = pool.submit<Func>(task);
+        //std::packaged_task<T(Iterator, Iterator)> task((design_conc_code::accumulate_block<Iterator, T>()));
+        //typedef std::function<T(Iterator, Iterator)> Func;
+        //futures[i] = pool.submit<Func>(design_conc_code::accumulate_block<Iterator, T>());
+        //futures[i] = pool.submit<Func>(task4<Iterator,T>);
+
+        typedef std::function<int(int, int)> Func1;
+        int a = 1, b = 2;
+        futures[i] = pool.submit<Func1>(&task3, a, b);
+
+
         block_start = block_end;
     }
     T last_result = design_conc_code::accumulate_block<Iterator, T>()(block_start, last);

@@ -58,6 +58,10 @@ void thread_pool_test() {
 }
 
 //Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
+int task3(int a, int b) {
+    TICK();
+    return 0;
+}
 void parallel_accumulate_test() {
     TICK();
     std::vector<unsigned> vct = {
