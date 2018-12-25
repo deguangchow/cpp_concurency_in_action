@@ -70,15 +70,13 @@ class function_wrapper {
         virtual ~impl_base() {}
     };
     std::unique_ptr<impl_base> impl;
-    template<typename F, typename...Args>
+    template<typename F>
     struct impl_type : impl_base {
         F f;
-        explicit impl_type(F&& f_, Args&&...args_) : f(std::move<F(Args...)>(f_(args_...))) {}
+        explicit impl_type(F&& f_) : f(std::move(f_)) {}
         void call() {
             TICK();
-            using result_type = std::result_of<F(Args...)>::type;
-            std::packaged_task<result_type(Args...)> task(std::move(f));
-            task();
+            f();
         }
     };
 
@@ -103,7 +101,9 @@ class thread_pool {
     std::vector<std::thread> threads;
     design_conc_code::join_threads joiner;
     void worker_thread() {
+        TICK();
         while (!done) {
+            WARN("worker_thread loop");
             function_wrapper task;
             if (work_queue.try_pop(task)) {
                 task();
@@ -167,17 +167,13 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
         Iterator block_end = block_start;
         std::advance(block_end, block_size);
-
-        //std::packaged_task<T(Iterator, Iterator)> task((design_conc_code::accumulate_block<Iterator, T>()));
-        //typedef std::function<T(Iterator, Iterator)> Func;
-        //futures[i] = pool.submit<Func>(design_conc_code::accumulate_block<Iterator, T>());
-        //futures[i] = pool.submit<Func>(task4<Iterator,T>);
-
-        typedef std::function<int(int, int)> Func1;
-        int a = 1, b = 2;
-        futures[i] = pool.submit<Func1>(&task3, a, b);
-
-
+#if 0//exist compile error
+        typedef std::function<int(int, int)> Func;
+        futures[i] = pool.submit<Func>(design_conc_code::accumulate_block<Iterator, T>());
+#else//only 'void()' can be compiled correctly
+        typedef std::function<void()> Func;
+        pool.submit<Func>(&task2);
+#endif
         block_start = block_end;
     }
     T last_result = design_conc_code::accumulate_block<Iterator, T>()(block_start, last);
