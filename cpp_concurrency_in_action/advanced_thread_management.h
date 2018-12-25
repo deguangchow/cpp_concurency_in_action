@@ -237,6 +237,59 @@ std::list<T> parallel_quick_sort(std::list<T> input) {
 }
 void parallel_quick_sort_test();
 
+//Listing 9.6 A thread pool with thread-local work queue
+class thread_pool_local {
+    lock_based_conc_data::threadsafe_queue<function_wrapper> pool_work_queue;
+
+    std::atomic_bool done;
+    typedef std::queue<function_wrapper> local_queue_type;
+    static thread_local std::unique_ptr<local_queue_type> local_work_queue;
+
+    void worker_thread() {
+        TICK();
+        local_work_queue.reset(new local_queue_type);
+        while (!done) {
+            run_pending_task();
+        }
+    }
+
+public:
+    thread_pool_local() : done(false) {
+        TICK();
+    }
+    ~thread_pool_local() {
+        TICK();
+        done = true;
+    }
+    template<typename FunctionType>
+    std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f) {
+        TICK();
+        typedef typename std::result_of<FunctionType()>::type result_type;
+
+        std::packaged_task<result_type()> task(f);
+        std::future<result_type> res(task.get_future());
+        if (local_work_queue) {
+            local_work_queue->push(std::move(task));
+        } else {
+            pool_work_queue.push(std::move(task));
+        }
+        return res;
+    }
+    void run_pending_task() {
+        TICK();
+        function_wrapper task;
+        if (local_work_queue && !local_work_queue->empty()) {
+            task = std::move(local_work_queue->front());
+            local_work_queue->pop();
+            task();
+        } else if (pool_work_queue.try_pop(task)) {
+            task();
+        } else {
+            std::this_thread::yield();
+        }
+    }
+};
+
 }//namespace adv_thread_mg
 
 #endif  //ADVANCED_THREAD_MANAGEMENT_H
