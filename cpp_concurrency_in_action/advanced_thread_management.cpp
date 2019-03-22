@@ -156,5 +156,65 @@ void interruptible_thread_test() {
     }
 }
 
+//9.2.3 Interrupting a condition variable wait
+//Listing 9.10 A broken version of interruptible_wait for std::condition_variable
+//Listing 9.11 Using a timeout in interruptible_wait for std::condition_variable
+thread_local interrupt_flag_cv this_thread_interrupt_flag_cv;
+
+interrupt_flag_cv::interrupt_flag_cv() : thread_cond(0) {
+}
+void interrupt_flag_cv::set() {
+    TICK();
+    flag.store(true, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    if (thread_cond) {
+        thread_cond->notify_all();
+    }
+}
+bool interrupt_flag_cv::is_set() const {
+    TICK();
+    return flag.load(std::memory_order_relaxed);
+}
+void interrupt_flag_cv::set_condition_variable(std::condition_variable& cv) {
+    TICK();
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    thread_cond = &cv;
+}
+void interrupt_flag_cv::clear_condition_variable() {
+    TICK();
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    thread_cond = 0;
+}
+interrupt_flag_cv::clear_cv_on_destruct::~clear_cv_on_destruct() {
+    TICK();
+    this_thread_interrupt_flag_cv.clear_condition_variable();
+}
+void interruption_point_cv() {
+    TICK();
+    if (this_thread_interrupt_flag_cv.is_set()) {
+        throw std::current_exception();//throw thread_interrupted();
+    }
+}
+void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk) {
+    TICK();
+    interruption_point_cv();
+    this_thread_interrupt_flag_cv.set_condition_variable(cv);
+    interrupt_flag_cv::clear_cv_on_destruct guard;
+    interruption_point_cv();
+    cv.wait_for(lk, std::chrono::milliseconds(ONE));
+    interruption_point_cv();
+}
+template<typename Predicate>
+void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk, Predicate pred) {
+    TICK();
+    interruption_point_cv();
+    this_thread_interrupt_flag_cv.set_condition_variable(cv);
+    interrupt_flag_cv::clear_cv_on_destruct guard;
+    while (!this_thread_interrupt_flag_cv.is_set() && !pred()) {
+        cv.wait_for(lk, std::chrono::milliseconds(ONE));
+    }
+    interruption_point_cv();
+}
+
 }//namespace adv_thread_mg
 

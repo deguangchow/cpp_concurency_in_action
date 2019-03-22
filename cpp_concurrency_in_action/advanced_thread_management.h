@@ -440,6 +440,27 @@ public:
 void interruption_point();
 void interruptible_thread_test();
 
+//9.2.3 Interrupting a condition variable wait
+//Listing 9.10 A broken version of interruptible_wait for std::condition_variable
+//Listing 9.11 Using a timeout in interruptible_wait for std::condition_variable
+class interrupt_flag_cv {
+    std::atomic<bool> flag;
+    std::condition_variable* thread_cond;
+    std::mutex set_clear_mutex;
+public:
+    interrupt_flag_cv();
+    void set();
+    bool is_set() const;
+    void set_condition_variable(std::condition_variable& cv);
+    void clear_condition_variable();
+    struct clear_cv_on_destruct {
+        ~clear_cv_on_destruct();
+    };
+};
+void interruption_point_cv();
+void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk);
+template<typename Predicate>
+void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk, Predicate pred);
 
 }//namespace adv_thread_mg
 
