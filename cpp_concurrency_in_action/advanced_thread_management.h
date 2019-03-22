@@ -482,6 +482,10 @@ void interruption_point_cva();
 template<typename Lockable>
 void interruptible_wait(std::condition_variable_any& cv, Lockable& lk);
 
+//9.2.5 Interrupting other blocking calls
+template<typename T>
+void interruptible_wait(std::future<T>& uf);
+
 }//namespace adv_thread_mg
 
 #endif  //ADVANCED_THREAD_MANAGEMENT_H

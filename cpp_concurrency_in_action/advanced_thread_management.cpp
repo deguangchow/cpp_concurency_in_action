@@ -290,6 +290,17 @@ void interruptible_wait(std::condition_variable_any& cv, Lockable& lk) {
     this_thread_interrupt_flag_cva.wait(cv, lk);
 }
 
+//9.2.5 Interrupting other blocking calls
+template<typename T>
+void interruptible_wait(std::future<T>& uf) {
+    TICK();
+    while (!this_thread_interrupt_flag_cva.is_set()) {
+        if (uf.wait_for(lk, std::chrono::milliseconds(1)) == std::future_status::ready) {
+            break;
+        }
+    }
+    interruption_point_cva();
+}
 
 }//namespace adv_thread_mg
 
