@@ -142,6 +142,19 @@ void interruptible_thread::interrupt() {
     }
 }
 
+//9.2.2 Detecting that a thread has been interrupted
+void interruption_point() {
+    if (this_thread_interrupt_flag.is_set()) {
+        throw std::current_exception();//throw thread_interrupted();
+    }
+}
+void interruptible_thread_test() {
+    bool done = false;
+    while (!done) {
+        interruption_point();
+        //process_next_item();
+    }
+}
 
 }//namespace adv_thread_mg
 

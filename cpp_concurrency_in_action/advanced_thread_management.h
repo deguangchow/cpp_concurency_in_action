@@ -436,6 +436,10 @@ public:
     void interrupt();
 };
 
+//9.2.2 Detecting that a thread has been interrupted
+void interruption_point();
+void interruptible_thread_test();
+
 
 }//namespace adv_thread_mg
 
