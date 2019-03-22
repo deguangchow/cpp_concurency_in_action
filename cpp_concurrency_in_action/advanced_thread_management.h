@@ -486,6 +486,14 @@ void interruptible_wait(std::condition_variable_any& cv, Lockable& lk);
 template<typename T>
 void interruptible_wait(std::future<T>& uf);
 
+//9.2.6 Handling interruptions
+
+//9.2.7 Interrupting background tasks on application exit
+//Listing 9.13 Monitoring the filesystem in the background
+void background_thread(int disk_id);
+void start_background_processing();
+void monitor_filesystem();
+
 }//namespace adv_thread_mg
 
 #endif  //ADVANCED_THREAD_MANAGEMENT_H

@@ -302,5 +302,44 @@ void interruptible_wait(std::future<T>& uf) {
     interruption_point_cva();
 }
 
+//9.2.7 Interrupting background tasks on application exit
+//Listing 9.13 Monitoring the filesystem in the background
+std::mutex config_mutex;
+std::vector<interruptible_thread> background_threads;
+class fs_change {
+public:
+    bool has_changes() const {
+        return true;
+    }
+};
+fs_change get_fs_changes(int disk_id) {
+    TICK();
+    return fs_change();
+}
+void update_index(fs_change const& fsc) {
+    TICK();
+}
+void background_thread(int disk_id) {
+    TICK();
+    while (true) {
+        interruption_point_cva();
+        fs_change fsc = get_fs_changes(disk_id);
+        if (fsc.has_changes()) {
+            update_index(fsc);
+        }
+    }
+}
+void start_background_processing() {
+    TICK();
+    int disk_1 = 1, disk_2 = 2;
+    typedef std::function<void(int)> F;
+    background_threads.push_back(interruptible_thread(background_thread, disk_1));
+    background_threads.push_back(interruptible_thread(background_thread, disk_2));
+}
+void monitor_filesystem() {
+    TICK();
+    start_background_processing();
+}
+
 }//namespace adv_thread_mg
 
