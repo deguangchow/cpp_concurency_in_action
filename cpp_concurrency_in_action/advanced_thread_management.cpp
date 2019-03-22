@@ -333,12 +333,23 @@ void start_background_processing() {
     TICK();
     int disk_1 = 1, disk_2 = 2;
     typedef std::function<void(int)> F;
-    background_threads.push_back(interruptible_thread(background_thread, disk_1));
-    background_threads.push_back(interruptible_thread(background_thread, disk_2));
+    //background_threads.push_back(interruptible_thread::<F>(background_thread, disk_1));
+    //background_threads.push_back(interruptible_thread::<F>(background_thread, disk_2));
+}
+void process_gui_until_exit() {
+    TICK();
 }
 void monitor_filesystem() {
     TICK();
     start_background_processing();
+    process_gui_until_exit();
+    std::unique_lock<std::mutex> lk(config_mutex);
+    for (unsigned i = 0; i < background_threads.size(); ++i) {
+        background_threads[i].interrupt();
+    }
+    for (unsigned i = 0; i < background_threads.size(); ++i) {
+        background_threads[i].join();
+    }
 }
 
 }//namespace adv_thread_mg
