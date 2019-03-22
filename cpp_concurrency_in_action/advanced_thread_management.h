@@ -415,6 +415,27 @@ public:
     }
 };
 
+//9.2 Interrupting threads
+//9.2.1 Launching and interrupting another thread
+//Listing 9.9 Basic implementation of interruptible_thread
+class interrupt_flag {
+    std::atomic<bool> flag = false;
+public:
+    void set();
+    bool is_set() const;
+};
+class interruptible_thread {
+    std::thread internal_thread;
+    interrupt_flag* flag;
+public:
+    template<typename FunctionType>
+    explicit interruptible_thread(FunctionType f);
+    void join();
+    void detach();
+    bool joinable() const;
+    void interrupt();
+};
+
 
 }//namespace adv_thread_mg
 

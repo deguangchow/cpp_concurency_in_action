@@ -106,5 +106,42 @@ void parallel_quick_sort_test() {
     std::cout << std::endl;
 }
 
+//9.2 Interrupting threads
+//9.2.1 Launching and interrupting another thread
+//Listing 9.9 Basic implementation of interruptible_thread
+void interrupt_flag::set() {
+    flag.store(true);
+}
+bool interrupt_flag::is_set() const {
+    return flag.load();
+}
+
+thread_local interrupt_flag this_thread_interrupt_flag;
+
+template<typename FunctionType>
+interruptible_thread::interruptible_thread(FunctionType f) {
+    std::promise<interrupt_flag*> p;
+    internal_thread = std::thread([f, &p] {
+        p.set_value(&this_thread_interrupt_flag);
+        f();
+    });
+    flag = p.get_future().get();
+}
+void interruptible_thread::join() {
+    internal_thread.join();
+}
+void interruptible_thread::detach() {
+    internal_thread.detach();
+}
+bool interruptible_thread::joinable() const {
+    return internal_thread.joinable();
+}
+void interruptible_thread::interrupt() {
+    if (flag) {
+        flag->set();
+    }
+}
+
+
 }//namespace adv_thread_mg
 
