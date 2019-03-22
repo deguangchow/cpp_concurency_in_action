@@ -216,5 +216,80 @@ void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex
     interruption_point_cv();
 }
 
+//9.2.4 Interrupting a wait on std::condition_variable_any
+//Listing 9.12 interruptible_wait for std::condition_variable_any
+thread_local interrupt_flag_cva this_thread_interrupt_flag_cva;
+
+interrupt_flag_cva::interrupt_flag_cva() : thread_cond(0), thread_cond_any(0) {
+}
+void interrupt_flag_cva::set() {
+    TICK();
+    flag.store(true, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    if (thread_cond) {
+        thread_cond->notify_all();
+    } else if (thread_cond_any) {
+        thread_cond_any->notify_all();
+    }
+}
+bool interrupt_flag_cva::is_set() const {
+    TICK();
+    return flag.load(std::memory_order_relaxed);
+}
+template<typename Lockable>
+void interrupt_flag_cva::wait(std::condition_variable_any& cv, Lockable& lk) {
+    struct custom_lock {
+        interrupt_flag_cva* self;
+        Lockable& lk;
+        custom_lock(interrupt_flag_cva* self_, std::condition_variable_any& cond, Lockable& lk_) :
+            self(self_), lk(lk_) {
+            TICK();
+            self->set_clear_mutex.lock();
+            self->thread_cond_any = &cond;
+        }
+        void unlock() {
+            TICK();
+            lk.unlock();
+            self->set_clear_mutex.unlock();
+        }
+        void lock() {
+            TICK();
+            std::lock(self->set_clear_mutex, lk);
+        }
+        ~custom_lock() {
+            TICK();
+            self->thread_cond_any = 0;
+            self->set_clear_mutex.unlock();
+        }
+    };
+    custom_lock cl(this, cv, lk);
+    interruption_point_cva();
+    cv.wait(cl);
+    interruption_point_cva();
+}
+void interrupt_flag_cva::set_condition_variable(std::condition_variable& cv) {
+    TICK();
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    thread_cond = &cv;
+}
+void interrupt_flag_cva::clear_condition_variable() {
+    TICK();
+    std::lock_guard<std::mutex> lk(set_clear_mutex);
+    thread_cond = 0;
+    thread_cond_any = 0;
+}
+void interruption_point_cva() {
+    TICK();
+    if (this_thread_interrupt_flag_cva.is_set()) {
+        throw std::current_exception();//throw thread_interrupted();
+    }
+}
+template<typename Lockable>
+void interruptible_wait(std::condition_variable_any& cv, Lockable& lk) {
+    TICK();
+    this_thread_interrupt_flag_cva.wait(cv, lk);
+}
+
+
 }//namespace adv_thread_mg
 

@@ -462,6 +462,26 @@ void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex
 template<typename Predicate>
 void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk, Predicate pred);
 
+//9.2.4 Interrupting a wait on std::condition_variable_any
+//Listing 9.12 interruptible_wait for std::condition_variable_any
+class interrupt_flag_cva {
+    std::atomic<bool> flag;
+    std::condition_variable* thread_cond;
+    std::condition_variable_any* thread_cond_any;
+    std::mutex set_clear_mutex;
+public:
+    interrupt_flag_cva();
+    void set();
+    bool is_set() const;
+    template<typename Lockable>
+    void wait(std::condition_variable_any& cv, Lockable& lk);
+    void set_condition_variable(std::condition_variable& cv);
+    void clear_condition_variable();
+};
+void interruption_point_cva();
+template<typename Lockable>
+void interruptible_wait(std::condition_variable_any& cv, Lockable& lk);
+
 }//namespace adv_thread_mg
 
 #endif  //ADVANCED_THREAD_MANAGEMENT_H
