@@ -18,6 +18,7 @@
 #include "lock_free_concurrent_data_structures.h"
 #include "designing_concurrent_code.h"
 #include "advanced_thread_management.h"
+#include "test_debug_mulitithreaded_app.h"
 
 int main() {
     TICK();
@@ -146,9 +147,12 @@ int main() {
     adv_thread_mg::simple_thread_pool_test();
     adv_thread_mg::thread_pool_test();
     adv_thread_mg::parallel_accumulate_test();
+    adv_thread_mg::parallel_quick_sort_test();
 #endif
 
-    adv_thread_mg::parallel_quick_sort_test();
+#if 0//chapter10
+#endif
+    test_debug_mulitithread::test_concurrent_push_and_pop_on_empty_queue();
 
 
     return 0;

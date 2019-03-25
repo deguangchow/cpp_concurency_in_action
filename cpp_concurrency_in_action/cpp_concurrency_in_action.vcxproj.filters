@@ -43,6 +43,9 @@
     <Filter Include="chapter9">
       <UniqueIdentifier>{3f0e9bff-e7af-48cc-a7c6-c0c02d3109ab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="chapter10">
+      <UniqueIdentifier>{74dc6157-9aec-481e-9f56-7029eeaea1b6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -90,6 +93,9 @@
     <ClInclude Include="advanced_thread_management.h">
       <Filter>chapter9</Filter>
     </ClInclude>
+    <ClInclude Include="test_debug_mulitithreaded_app.h">
+      <Filter>chapter10</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -130,6 +136,9 @@
     </ClCompile>
     <ClCompile Include="advanced_thread_management.cpp">
       <Filter>chapter9</Filter>
+    </ClCompile>
+    <ClCompile Include="test_debug_mulitithreaded_app.cpp">
+      <Filter>chapter10</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
