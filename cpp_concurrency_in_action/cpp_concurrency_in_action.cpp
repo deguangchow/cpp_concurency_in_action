@@ -19,6 +19,7 @@
 #include "designing_concurrent_code.h"
 #include "advanced_thread_management.h"
 #include "test_debug_mulitithreaded_app.h"
+#include "messaging.h"
 
 int main() {
     TICK();
