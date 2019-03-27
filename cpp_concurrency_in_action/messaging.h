@@ -216,6 +216,27 @@ public:
     messaging::sender get_sender();
 };
 
+//Listing C.8 The bank state machine
+class bank_machine {
+    messaging::receiver incoming;
+    unsigned _balance;
+public:
+    bank_machine();
+    void done();
+    void run();
+    messaging::sender get_sender();
+};
+
+//Listing C.9 The user-interface state machine
+class interface_machine {
+    messaging::receiver incoming;
+    std::mutex iom;
+public:
+    void done();
+    void run();
+    messaging::sender get_sender();
+};
+
 }//namespace messaging
 #endif  //MESSAGING_H
 

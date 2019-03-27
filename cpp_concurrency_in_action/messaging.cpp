@@ -187,5 +187,91 @@ messaging::sender atm::get_sender() {
     return incoming;
 }
 
+//Listing C.8 The bank state machine
+bank_machine::bank_machine() :_balance(199) {
+}
+void bank_machine::done() {
+    TICK();
+    get_sender().send(messaging::close_queue());
+}
+void bank_machine::run() {
+    TICK();
+    try {
+        for (;;) {
+            incoming.wait().handle<verify_pin>([&](verify_pin const& msg) {
+                if (msg.pin == "1937") {
+                    msg.atm_queue.send(pin_verified());
+                } else {
+                    msg.atm_queue.send(pin_incorrect());
+                }
+            }).handle<withdraw>([&](withdraw const& msg) {
+                if (_balance >= msg.amount) {
+                    msg.atm_queue.send(withdraw_ok());
+                    _balance -= msg.amount;
+                } else {
+                    msg.atm_queue.send(withdraw_denied());
+                }
+            }).handle<get_balance>([&](get_balance const& msg) {
+                msg.atm_queue.send(messaging::balance(_balance));
+            }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
+            }).handle<cancel_withdrawal>([&](cancel_withdrawal const& msg) {
+            });
+        }
+    } catch (messaging::close_queue const&) {
+    }
+}
+messaging::sender bank_machine::get_sender() {
+    TICK();
+    return incoming;
+}
+
+//Listing C.9 The user-interface state machine
+void interface_machine::done() {
+    TICK();
+    get_sender().send(messaging::close_queue());
+}
+void interface_machine::run() {
+    TICK();
+    try {
+        for (;;) {
+            incoming.wait().handle<issue_money>([&](issue_money const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Issuing " << msg.amount << std::endl;
+            }).handle<display_insufficient_funds>([&](display_insufficient_funds const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Insufficient funds" << std::endl;
+            }).handle<display_enter_pin>([&](display_enter_pin const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Please enter your PIN(0-9)" << std::endl;
+            }).handle<display_enter_card>([&](display_enter_card const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Please enter your card(I)" << std::endl;
+            }).handle<display_balance>([&](display_balance const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "The balance of your account is " << msg.amount << std::endl;
+            }).handle<display_withdrawal_options>([&](display_withdrawal_options const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Withdraw 50? (w)" << std::endl;
+                std::cout << "Display Balance? (b)" << std::endl;
+                std::cout << "Cancel? (c)" << std::endl;
+            }).handle<display_withdrawal_cancelled>([&](display_withdrawal_cancelled const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Withdraw cancelled" << std::endl;
+            }).handle<display_pin_incorrect_message>([&](display_pin_incorrect_message const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "PIN incorrect" << std::endl;
+            }).handle<eject_card>([&](eject_card const& msg) {
+                std::lock_guard<std::mutex> lk(iom);
+                std::cout << "Ejecting card" << std::endl;
+            });
+        }
+    } catch (messaging::close_queue&) {
+    }
+}
+messaging::sender interface_machine::get_sender() {
+    TICK();
+    return incoming;
+}
+
 }//namespace messaging
 
