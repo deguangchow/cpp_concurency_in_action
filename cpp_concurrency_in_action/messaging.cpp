@@ -132,10 +132,10 @@ void atm::verifying_pin() {
 }
 void atm::getting_pin() {
     TICK();
-    incoming.wait().handle<digit_passed>([&](digit_passed const& msg) {
+    incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
         unsigned const pin_length = 4;
         pin + msg.digit;
-        if (pin.length() == pin.length()) {
+        if (pin.length() == pin_length) {
             bank.send(verify_pin(account, pin, incoming));
             state = &atm::verifying_pin;
         }
@@ -178,8 +178,7 @@ void atm::run() {
         for (;;) {
             (this->*state)();
         }
-    }
-    catch (...) {
+    } catch (...) {
     }
 }
 messaging::sender atm::get_sender() {
@@ -235,34 +234,25 @@ void interface_machine::run() {
     try {
         for (;;) {
             incoming.wait().handle<issue_money>([&](issue_money const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Issuing " << msg.amount << std::endl;
+                INFO("Issuing %d", msg.amount);
             }).handle<display_insufficient_funds>([&](display_insufficient_funds const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Insufficient funds" << std::endl;
+                INFO("Insufficient funds");
             }).handle<display_enter_pin>([&](display_enter_pin const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Please enter your PIN(0-9)" << std::endl;
+                INFO("Please enter your PIN(0-9)");
             }).handle<display_enter_card>([&](display_enter_card const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Please enter your card(I)" << std::endl;
+                INFO("Please enter your card(I)");
             }).handle<display_balance>([&](display_balance const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "The balance of your account is " << msg.amount << std::endl;
+                INFO("The balance of your account is %d", msg.amount);
             }).handle<display_withdrawal_options>([&](display_withdrawal_options const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Withdraw 50? (w)" << std::endl;
-                std::cout << "Display Balance? (b)" << std::endl;
-                std::cout << "Cancel? (c)" << std::endl;
+                INFO("Withdraw 50? (w)");
+                INFO("Display Balance? (b)");
+                INFO("Cancel? (c)");
             }).handle<display_withdrawal_cancelled>([&](display_withdrawal_cancelled const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Withdraw cancelled" << std::endl;
+                INFO("Withdraw cancelled");
             }).handle<display_pin_incorrect_message>([&](display_pin_incorrect_message const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "PIN incorrect" << std::endl;
+                INFO("PIN incorrect");
             }).handle<eject_card>([&](eject_card const& msg) {
-                std::lock_guard<std::mutex> lk(iom);
-                std::cout << "Ejecting card" << std::endl;
+                INFO("Ejecting card");
             });
         }
     } catch (messaging::close_queue&) {
@@ -271,6 +261,62 @@ void interface_machine::run() {
 messaging::sender interface_machine::get_sender() {
     TICK();
     return incoming;
+}
+
+//Listing C.10 The driving code
+void atm_messaging_test() {
+    TICK();
+    bank_machine bank;
+    interface_machine interface_hardware;
+    atm machine(bank.get_sender(), interface_hardware.get_sender());
+
+    std::thread bank_thread(&bank_machine::run, &bank);
+    std::thread if_thread(&interface_machine::run, &interface_hardware);
+    std::thread atm_thread(&atm::run, &machine);
+
+    messaging::sender atmqueue(machine.get_sender());
+    bool quit_pressed = false;
+
+    while (!quit_pressed) {
+        char c = getchar();
+        switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            atmqueue.send(digit_pressed(c));
+            break;
+        case 'b':
+            atmqueue.send(balance_pressed());
+            break;
+        case 'w':
+            atmqueue.send(withdraw_processed("acc1234", 50));
+            break;
+        case 'c':
+            atmqueue.send(cancel_pressed());
+            break;
+        case 'q':
+            quit_pressed = true;
+            break;
+        case 'i':
+            atmqueue.send(card_inserted("acc1234"));
+            break;
+        }
+    }
+
+    bank.done();
+    machine.done();
+    interface_hardware.done();
+
+    atm_thread.join();
+    bank_thread.join();
+    if_thread.join();
 }
 
 }//namespace messaging

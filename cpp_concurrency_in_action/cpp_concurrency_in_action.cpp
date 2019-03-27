@@ -152,9 +152,13 @@ int main() {
 #endif
 
 #if 0//chapter10
-#endif
     test_debug_mulitithread::test_concurrent_push_and_pop_on_empty_queue();
+#endif
 
+#if 0//chapterC
+
+#endif
+    messaging::atm_messaging_test();
 
     return 0;
 }

@@ -145,9 +145,9 @@ struct card_inserted {
     std::string account;
     explicit card_inserted(std::string const& account_) :account(account_) {}
 };
-struct digit_passed {
+struct digit_pressed {
     char digit;
-    explicit digit_passed(char digit_) :digit(digit_) {}
+    explicit digit_pressed(char digit_) :digit(digit_) {}
 };
 struct clear_last_pressed {};
 struct eject_card {};
@@ -230,12 +230,14 @@ public:
 //Listing C.9 The user-interface state machine
 class interface_machine {
     messaging::receiver incoming;
-    std::mutex iom;
 public:
     void done();
     void run();
     messaging::sender get_sender();
 };
+
+//Listing C.10 The driving code
+void atm_messaging_test();
 
 }//namespace messaging
 #endif  //MESSAGING_H
