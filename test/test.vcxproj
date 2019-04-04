@@ -19,14 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AB6B7F13-5551-4797-96FD-6D7B6CFF645D}</ProjectGuid>
+    <ProjectGuid>{B49442B7-FDF2-4BE0-A56E-A509E15FC876}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>cpp_concurrency_in_action</RootNamespace>
+    <RootNamespace>test</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -71,12 +71,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>..\..\googletest-master\msvs15\lib\Debug;..\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>..\..\googletest-master\msvs15\lib\Release;..\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -88,10 +90,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..\..\googletest-master\googletest\include;..\cpp_concurrency_in_action\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>gtestd.lib;cpp_concurrency_in_action.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -116,12 +120,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..\..\googletest-master\googletest\include;..\cpp_concurrency_in_action\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>gtestd.lib;cpp_concurrency_in_action.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,44 +151,18 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="advanced_thread_management.h" />
-    <ClInclude Include="atomic_memery_model_operations.h" />
-    <ClInclude Include="common_def.h" />
-    <ClInclude Include="common_fun.h" />
-    <ClInclude Include="console_log.h" />
-    <ClInclude Include="designing_concurrent_code.h" />
-    <ClInclude Include="lock_based_concurrent_data_structures.h" />
-    <ClInclude Include="lock_free_concurrent_data_structures.h" />
-    <ClInclude Include="messaging.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="synchronizing_concurrent_operations.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="test_debug_mulitithreaded_app.h" />
-    <ClInclude Include="thread_manage.h" />
-    <ClInclude Include="thread_sharing_data.h" />
-    <ClInclude Include="thread_test.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="advanced_thread_management.cpp" />
-    <ClCompile Include="atomic_memery_model_operations.cpp" />
-    <ClCompile Include="common_fun.cpp" />
-    <ClCompile Include="cpp_concurrency_in_action.cpp" />
-    <ClCompile Include="console_log.cpp" />
-    <ClCompile Include="designing_concurrent_code.cpp" />
-    <ClCompile Include="lock_based_concurrent_data_structures.cpp" />
-    <ClCompile Include="lock_free_concurrent_data_structures.cpp" />
-    <ClCompile Include="messaging.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="synchronizing_concurrent_operations.cpp" />
-    <ClCompile Include="test_debug_mulitithreaded_app.cpp" />
-    <ClCompile Include="thread_manage.cpp" />
-    <ClCompile Include="thread_sharing_data.cpp" />
-    <ClCompile Include="thread_test.cpp" />
+    <ClCompile Include="test_thread_test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
