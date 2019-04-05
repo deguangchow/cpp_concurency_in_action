@@ -13,6 +13,8 @@ python tools/ci/cpplint.py --filter=\
     --linelength=120 \
 	$(find cpp_concurrency_in_action/ -name "*.h") \
 	$(find cpp_concurrency_in_action/ -name "*.cpp") \
+	$(find test/ -name "*.h") \
+	$(find test/ -name "*.cpp") \
     > $LOG_FILE
 
 echo "===================== cpplint end  ====================="
