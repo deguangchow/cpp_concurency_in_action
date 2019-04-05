@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #include <gtest/gtest.h>
 #include "thread_test.h"
+#include "thread_manage.h"
 
 
 TEST(THREAD_TEST, 001) {
@@ -18,7 +19,7 @@ TEST(THREAD_TEST, 001) {
     EXPECT_NO_THROW(thread_test::hello_concurrency());
 }
 
-TEST(thread_test, 002) {
+TEST(THREAD_TEST, 002) {
     TICK();
     EXPECT_NO_THROW({
         std::thread t([] {std::cout << "hello worold" << std::endl; });
@@ -26,7 +27,7 @@ TEST(thread_test, 002) {
     });
 }
 
-TEST(thread_test, 002_1) {
+TEST(THREAD_TEST, 002_1) {
     TICK();
     EXPECT_NO_THROW({
         std::thread t([] {std::cout << "hello worold" << std::endl; });
@@ -34,17 +35,25 @@ TEST(thread_test, 002_1) {
     });
 }
 
-TEST(thread_test, 003) {
+TEST(THREAD_TEST, 003) {
     TICK();
     EXPECT_NO_THROW({
         std::async(std::launch::async, [] {std::cout << "hello worold" << std::endl; });
     });
 }
 
-TEST(thread_test, 003_1) {
+TEST(THREAD_TEST, 003_1) {
     TICK();
     EXPECT_NO_THROW({
         std::async(std::launch::deferred, [] {std::cout << "hello worold" << std::endl; });
     });
 }
+
+TEST(THREAD_MANAGE, 001) {
+    TICK();
+    EXPECT_NO_THROW({
+        thread_manage::launching_thread_test();
+    });
+}
+
 
