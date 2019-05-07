@@ -92,7 +92,7 @@ public:
         return *this;
     }
     function_wrapper(const function_wrapper&) = delete;
-    function_wrapper(function_wrapper&) = delete;
+    //function_wrapper(function_wrapper&) = delete;
     function_wrapper& operator=(const function_wrapper&) = delete;
 };
 class thread_pool {
