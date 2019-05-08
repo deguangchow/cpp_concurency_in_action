@@ -88,14 +88,28 @@ dispatcher::~dispatcher() noexcept(false) {
 }
 
 //Listing C.7 The ATM state machine
+void atm::getting_amount() {
+    TICK();
+    incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
+        withdrawal_amount *= 10;
+        withdrawal_amount += (msg.digit - '0');
+    }).handle<clear_last_pressed>([&](clear_last_pressed const& msg) {
+        withdrawal_amount /= 10;
+    }).handle<ok_pressed>([&](ok_pressed const& msg) {
+        bank.send(withdraw(account, withdrawal_amount, incoming));
+        state = &atm::process_withdrawal;
+    }).handle<cancel_pressed>([&](cancel_pressed const&) {
+        state = &atm::done_processing;
+    });
+}
 void atm::process_withdrawal() {
     TICK();
     incoming.wait().handle<withdraw_ok>([&](withdraw_ok const& msg) {
         interface_hardware.send(issue_money(withdrawal_amount));
-        state = &atm::done_processing;
+        state = &atm::continue_processing;
     }).handle<withdraw_denied>([&](withdraw_denied const& msg) {
         interface_hardware.send(display_insufficient_funds());
-        state = &atm::done_processing;
+        state = &atm::continue_processing;
     }).handle<cancel_pressed>([&](cancel_pressed const& msg) {
         bank.send(cancel_withdrawal(account, withdrawal_amount));
         interface_hardware.send(display_withdrawal_cancelled());
@@ -114,7 +128,10 @@ void atm::process_balance() {
 void atm::wait_for_action() {
     TICK();
     interface_hardware.send(display_withdrawal_options());
-    incoming.wait().handle<withdraw_processed>([&](withdraw_processed const& msg) {
+    incoming.wait().handle<withdraw_amount_processed>([&](withdraw_amount_processed const& msg) {
+        interface_hardware.send(display_withdrawal_amount());
+        state = &atm::getting_amount;
+    }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
         withdrawal_amount = msg.amount;
         bank.send(withdraw(account, msg.amount, incoming));
         state = &atm::process_withdrawal;
@@ -139,16 +156,14 @@ void atm::verifying_pin() {
 void atm::getting_pin() {
     TICK();
     incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
-        unsigned const pin_length = 4;
         pin += msg.digit;
-        if (pin.length() == pin_length) {
-            bank.send(verify_pin(account, pin, incoming));
-            state = &atm::verifying_pin;
-        }
     }).handle<clear_last_pressed>([&](clear_last_pressed const& msg) {
         if (!pin.empty()) {
             pin.pop_back();
         }
+    }).handle<ok_pressed>([&](ok_pressed const& msg) {
+        bank.send(verify_pin(account, pin, incoming));
+        state = &atm::verifying_pin;
     }).handle<cancel_pressed>([&](cancel_pressed const&) {
         state = &atm::done_processing;
     });
@@ -167,6 +182,10 @@ void atm::done_processing() {
     TICK();
     interface_hardware.send(eject_card());
     state = &atm::waiting_for_card;
+}
+void atm::continue_processing() {
+    TICK();
+    state = &atm::wait_for_action;
 }
 atm::atm(messaging::sender bank_, messaging::sender interface_hardware_) :
     bank(bank_), interface_hardware(interface_hardware_) {
@@ -197,6 +216,27 @@ messaging::sender atm::get_sender() {
 
 //Listing C.8 The bank state machine
 bank_machine::bank_machine() :_balance(199) {
+    state = nullptr;
+}
+void bank_machine::wait_for_action() {
+    incoming.wait().handle<verify_pin>([&](verify_pin const& msg) {
+        if (msg.pin == "1937") {
+            msg.atm_queue.send(pin_verified());
+        } else {
+            msg.atm_queue.send(pin_incorrect());
+        }
+    }).handle<withdraw>([&](withdraw const& msg) {
+        if (_balance >= msg.amount) {
+            msg.atm_queue.send(withdraw_ok());
+            _balance -= msg.amount;
+        } else {
+            msg.atm_queue.send(withdraw_denied());
+        }
+    }).handle<get_balance>([&](get_balance const& msg) {
+        msg.atm_queue.send(messaging::balance(_balance));
+    }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
+    }).handle<cancel_withdrawal>([&](cancel_withdrawal const& msg) {
+    });
 }
 void bank_machine::done() {
     TICK();
@@ -204,26 +244,10 @@ void bank_machine::done() {
 }
 void bank_machine::run() {
     TICK();
+    state = &bank_machine::wait_for_action;
     try {
         for (;;) {
-            incoming.wait().handle<verify_pin>([&](verify_pin const& msg) {
-                if (msg.pin == "1937") {
-                    msg.atm_queue.send(pin_verified());
-                } else {
-                    msg.atm_queue.send(pin_incorrect());
-                }
-            }).handle<withdraw>([&](withdraw const& msg) {
-                if (_balance >= msg.amount) {
-                    msg.atm_queue.send(withdraw_ok());
-                    _balance -= msg.amount;
-                } else {
-                    msg.atm_queue.send(withdraw_denied());
-                }
-            }).handle<get_balance>([&](get_balance const& msg) {
-                msg.atm_queue.send(messaging::balance(_balance));
-            }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
-            }).handle<cancel_withdrawal>([&](cancel_withdrawal const& msg) {
-            });
+            (this->*state)();
         }
     } catch (messaging::close_queue const&) {
         INFO("catch close_queue");
@@ -237,35 +261,45 @@ messaging::sender bank_machine::get_sender() {
 }
 
 //Listing C.9 The user-interface state machine
+interface_machine::interface_machine() {
+    state = nullptr;
+}
 void interface_machine::done() {
     TICK();
     get_sender().send(messaging::close_queue());
 }
+void interface_machine::wait_for_show() {
+    incoming.wait().handle<issue_money>([&](issue_money const& msg) {
+        INFO("Issuing %d", msg.amount);
+    }).handle<display_insufficient_funds>([&](display_insufficient_funds const& msg) {
+        INFO("Insufficient funds");
+    }).handle<display_enter_pin>([&](display_enter_pin const& msg) {
+        INFO("Please enter your PIN(0-9), OK(#), BackSpace(B)");
+    }).handle<display_enter_card>([&](display_enter_card const& msg) {
+        INFO("Please enter your card(I)");
+    }).handle<display_balance>([&](display_balance const& msg) {
+        INFO("The balance of your account is %d", msg.amount);
+    }).handle<display_withdrawal_options>([&](display_withdrawal_options const& msg) {
+        INFO("Withdraw ? (W)");
+        INFO("Withdraw 50? (w)");
+        INFO("Display Balance? (b)");
+        INFO("Cancel? (c)");
+    }).handle<display_withdrawal_amount>([&](display_withdrawal_amount const& msg) {
+        INFO("Please enter your withdrawal amount(0-9), OK(#), BackSpace(B)");
+    }).handle<display_withdrawal_cancelled>([&](display_withdrawal_cancelled const& msg) {
+        INFO("Withdraw cancelled");
+    }).handle<display_pin_incorrect_message>([&](display_pin_incorrect_message const& msg) {
+        INFO("PIN incorrect");
+    }).handle<eject_card>([&](eject_card const& msg) {
+        INFO("Ejecting card");
+    });
+}
 void interface_machine::run() {
     TICK();
+    state = &interface_machine::wait_for_show;
     try {
         for (;;) {
-            incoming.wait().handle<issue_money>([&](issue_money const& msg) {
-                INFO("Issuing %d", msg.amount);
-            }).handle<display_insufficient_funds>([&](display_insufficient_funds const& msg) {
-                INFO("Insufficient funds");
-            }).handle<display_enter_pin>([&](display_enter_pin const& msg) {
-                INFO("Please enter your PIN(0-9)");
-            }).handle<display_enter_card>([&](display_enter_card const& msg) {
-                INFO("Please enter your card(I)");
-            }).handle<display_balance>([&](display_balance const& msg) {
-                INFO("The balance of your account is %d", msg.amount);
-            }).handle<display_withdrawal_options>([&](display_withdrawal_options const& msg) {
-                INFO("Withdraw 50? (w)");
-                INFO("Display Balance? (b)");
-                INFO("Cancel? (c)");
-            }).handle<display_withdrawal_cancelled>([&](display_withdrawal_cancelled const& msg) {
-                INFO("Withdraw cancelled");
-            }).handle<display_pin_incorrect_message>([&](display_pin_incorrect_message const& msg) {
-                INFO("PIN incorrect");
-            }).handle<eject_card>([&](eject_card const& msg) {
-                INFO("Ejecting card");
-            });
+            (this->*state)();
         }
     } catch (messaging::close_queue&) {
         INFO("catch close_queue");
@@ -310,11 +344,20 @@ void atm_messaging_test() {
         case 'b':
             atmqueue.send(balance_pressed());
             break;
+        case 'B':
+            atmqueue.send(clear_last_pressed());
+            break;
         case 'w':
             atmqueue.send(withdraw_processed("acc1234", 50));
             break;
+        case 'W':
+            atmqueue.send(withdraw_amount_processed("acc1234"));
+            break;
         case 'c':
             atmqueue.send(cancel_pressed());
+            break;
+        case '#':
+            atmqueue.send(ok_pressed());
             break;
         case 'q':
             quit_pressed = true;

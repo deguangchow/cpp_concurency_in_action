@@ -137,6 +137,7 @@ struct withdraw {
     withdraw(std::string const& account_, unsigned amount_, messaging::sender atm_queue_) :
         account(account_), amount(amount_), atm_queue(atm_queue_) {}
 };
+struct withdraw_amount {};
 struct withdraw_ok {};
 struct withdraw_denied {};
 struct cancel_withdrawal {
@@ -148,6 +149,10 @@ struct withdraw_processed {
     std::string account;
     unsigned amount;
     withdraw_processed(std::string const& account_, unsigned amount_) :account(account_), amount(amount_) {}
+};
+struct withdraw_amount_processed {
+    std::string account;
+    explicit withdraw_amount_processed(std::string const& account_) :account(account_) {}
 };
 struct card_inserted {
     std::string account;
@@ -164,6 +169,7 @@ struct withdraw_passed {
     explicit withdraw_passed(unsigned amount_) :amount(amount_) {}
 };
 struct cancel_pressed {};
+struct ok_pressed {};
 struct issue_money {
     unsigned amount;
     explicit issue_money(unsigned amount_) :amount(amount_) {}
@@ -183,6 +189,7 @@ struct display_insufficient_funds {};
 struct display_withdrawal_cancelled {};
 struct display_pin_incorrect_message {};
 struct display_withdrawal_options {};
+struct display_withdrawal_amount {};
 struct get_balance {
     std::string account;
     mutable messaging::sender atm_queue;
@@ -207,6 +214,7 @@ class atm {
     std::string account;
     unsigned withdrawal_amount;
     std::string pin;
+    void getting_amount();
     void process_withdrawal();
     void process_balance();
     void wait_for_action();
@@ -214,6 +222,7 @@ class atm {
     void getting_pin();
     void waiting_for_card();
     void done_processing();
+    void continue_processing();
     atm(atm const&) = delete;
     atm& operator=(atm const&) = delete;
 
@@ -228,6 +237,8 @@ public:
 class bank_machine {
     messaging::receiver incoming;
     unsigned _balance;
+    void(bank_machine::*state)();
+    void wait_for_action();
 public:
     bank_machine();
     void done();
@@ -238,7 +249,10 @@ public:
 //Listing C.9 The user-interface state machine
 class interface_machine {
     messaging::receiver incoming;
+    void(interface_machine::*state)();
+    void wait_for_show();
 public:
+    interface_machine();
     void done();
     void run();
     messaging::sender get_sender();
