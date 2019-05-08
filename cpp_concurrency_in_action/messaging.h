@@ -83,11 +83,19 @@ class TemplateDispatcher {
 
     void wait_and_dispatch() {
         TICK();
-        for (;;) {
-            auto msg = q->wait_and_pop();
-            if (dispatch(msg)) {
-                break;
+        try {
+            for (;;) {
+                auto msg = q->wait_and_pop();
+                if (dispatch(msg)) {
+                    break;
+                }
             }
+        } catch (messaging::close_queue const& e) {
+            INFO("catch close_queue, throw it.");
+            throw e;
+        } catch (...) {
+            ERR("catch ..., throw close_queue.");
+            throw close_queue();
         }
     }
     bool dispatch(std::shared_ptr<message_base> const& msg) {
@@ -107,7 +115,7 @@ public:
     }
     TemplateDispatcher(queue* q_, PreviousDispatcher* prev_, Func&& f_) :
         q(q_), prev(prev_), f(std::forward<Func>(f_)), chained(false) {
-        prev_->chained = false;
+        prev_->chained = true;
     }
     template<typename OtherMsg, typename OtherFunc>
     TemplateDispatcher<TemplateDispatcher, OtherMsg, OtherFunc> handle(OtherFunc&& of) {

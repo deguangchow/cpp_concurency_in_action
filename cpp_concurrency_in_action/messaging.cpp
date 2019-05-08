@@ -57,9 +57,15 @@ dispatcher::dispatcher(dispatcher&& other) : q(other.q), chained(other.chained) 
 }
 void dispatcher::wait_and_dispatch() {
     TICK();
-    for (;;) {
-        auto msg = q->wait_and_pop();
-        dispatch(msg);
+    try {
+        for (;;) {
+            auto msg = q->wait_and_pop();
+            dispatch(msg);
+        }
+    } catch (messaging::close_queue const&) {
+        INFO("catch close_queue");
+    } catch (...) {
+        INFO("catch ...");
     }
 }
 bool dispatcher::dispatch(std::shared_ptr<message_base> const& msg) {
@@ -178,7 +184,10 @@ void atm::run() {
         for (;;) {
             (this->*state)();
         }
+    } catch (messaging::close_queue const&) {
+        INFO("catch close_queue");
     } catch (...) {
+        ERR("catch...");
     }
 }
 messaging::sender atm::get_sender() {
@@ -217,6 +226,9 @@ void bank_machine::run() {
             });
         }
     } catch (messaging::close_queue const&) {
+        INFO("catch close_queue");
+    } catch (...) {
+        ERR("catch ...");
     }
 }
 messaging::sender bank_machine::get_sender() {
@@ -256,6 +268,9 @@ void interface_machine::run() {
             });
         }
     } catch (messaging::close_queue&) {
+        INFO("catch close_queue");
+    } catch (...) {
+        ERR("catch ...");
     }
 }
 messaging::sender interface_machine::get_sender() {

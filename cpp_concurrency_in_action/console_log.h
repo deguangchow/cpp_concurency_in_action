@@ -98,7 +98,7 @@ public:
 #define ERR(_F_, ...)
 #define WARN(_F_, ...)
 #define DEBUG(_F_, ...)
-#define INFO(_F_, ...)
+#define INFO(_F_, ...)Tick::info(_F_, __VA_ARGS__)
 #define BAR(_F_, ...)
 #define ST(_ID)Tick FS_DO_JOIN(tick_, __COUNTER__)(_ID)
 #define TV_LIST_INT(X)
