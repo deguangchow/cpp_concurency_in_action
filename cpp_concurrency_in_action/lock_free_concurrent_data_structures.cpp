@@ -34,8 +34,8 @@ void spinlock_mutex_test() {
 //7.2 Example of lock-free data structures
 //7.2.1 Writing a thread-safe stack without locks
 //Listing 7.2 Implementing push() without locks
-lock_free_stack<unsigned> lfs;
 void lock_free_stack_test() {
+    lock_free_stack<unsigned> lfs;
     TICK();
     unsigned const &THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
@@ -53,9 +53,10 @@ void lock_free_stack_test() {
 }
 
 //Listing 7.3 A lock-free stack that leaks nodes
-lock_free_shared_ptr_stack<unsigned> lfsps;
 void lock_free_shared_ptr_stack_test() {
     TICK();
+    lock_free_shared_ptr_stack<unsigned> lfsps;
+
     unsigned const &THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
@@ -73,9 +74,10 @@ void lock_free_shared_ptr_stack_test() {
 
 //7.2.2 Stopping those pesky leaks: managing memory in lock-free data structures
 //Listing 7.4 Reclaiming nodes when no threads are in pop()
-lock_free_reclaim_stack<unsigned> lfrs;
 void lock_free_reclaim_stack_test() {
     TICK();
+    lock_free_reclaim_stack<unsigned> lfrs;
+
     unsigned const& THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
@@ -92,9 +94,10 @@ void lock_free_reclaim_stack_test() {
 
 //7.2.4 Detecting nodes in use with reference counting
 //Listing 7.8 A lock-free stack using a lock-free std::shared_ptr<> implementation
-lock_free_shared_stack<unsigned> lfss;
 void lock_free_shared_stack_test() {
     TICK();
+    lock_free_shared_stack<unsigned> lfss;
+
     unsigned const& THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
@@ -110,9 +113,10 @@ void lock_free_shared_stack_test() {
 }
 
 //Listing 7.10 Pushing a node on a lock-free stack using split reference counts
-lock_free_split_ref_cnt_stack<unsigned> lfsrcs;
 void lock_free_split_ref_cnt_stack_test() {
     TICK();
+    lock_free_split_ref_cnt_stack<unsigned> lfsrcs;
+
     unsigned const& THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
@@ -130,9 +134,10 @@ void lock_free_split_ref_cnt_stack_test() {
 
 //7.2.5 Appling the memory model to the lock-free stack
 //Listing 7.12 A lock-free stack with reference counting and relaxed atomic operations
-lock_free_memory_split_ref_cnt_stack<unsigned> lfmsrcs;
 void lock_free_memory_split_ref_cnt_stack_test() {
     TICK();
+    lock_free_memory_split_ref_cnt_stack<unsigned> lfmsrcs;
+
     unsigned const& THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
@@ -150,9 +155,10 @@ void lock_free_memory_split_ref_cnt_stack_test() {
 
 //7.2.6 Writing a thread-safe queue without lock
 //Listing 7.13 A single-producer, single-consumer lock-free queue
-lock_free_queue<unsigned> lfq;
 void lock_free_queue_test() {
     TICK();
+    lock_free_queue<unsigned> lfq;
+
     unsigned const& THREAD_NUMS = 5;
     std::vector<std::thread> vct_push(THREAD_NUMS);
     std::vector<std::future<std::shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
