@@ -36,12 +36,6 @@
 #include <utility>
 #include <set>
 
-//+ user`s head file.
-#include "targetver.h"
-#include "common_def.h"
-#include "console_log.h"
-#include "common_fun.h"
-
 
 //using std::
 using std::thread;
@@ -52,6 +46,7 @@ using std::lock_guard;
 using std::unique_lock;
 using std::future;
 using std::shared_future;
+using std::future_status;
 using std::promise;
 using std::packaged_task;
 using std::this_thread::get_id;
@@ -62,12 +57,20 @@ using std::this_thread::yield;
 using std::async;
 using std::launch;
 
+using std::atomic;
+using std::atomic_bool;
+using std::atomic_flag;
+using std::memory_order;
+
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::microseconds;
 
+using std::function;
+
 using std::move;
 using std::forward;
+using std::result_of;
 
 using std::shared_ptr;
 using std::make_shared;
@@ -81,6 +84,22 @@ using std::queue;
 using std::vector;
 using std::list;
 using std::array;
+using std::deque;
+
+using std::current_exception;
+
+using std::cin;
+using std::cout;
+using std::endl;
+
+
+//+ user`s head file.
+#include "targetver.h"
+#include "common_def.h"
+#include "console_log.h"
+#include "common_fun.h"
+
+
 
 #endif  //STDAFX_H
 

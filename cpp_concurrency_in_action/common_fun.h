@@ -13,8 +13,8 @@
 namespace common_fun {
 
 inline void sleep(unsigned sleep_ms) {
-    DEBUG("thread(%d) sleep:(%d)ms", std::this_thread::get_id(), sleep_ms);
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+    DEBUG("sleep:(%d)ms", sleep_ms);
+    sleep_for(milliseconds(sleep_ms));
 }
 
 }//namespace common_fun

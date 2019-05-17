@@ -20,47 +20,49 @@ namespace adv_thread_mg {
 void task1();
 void task2();
 class simple_thread_pool {
-    std::atomic_bool done;
-    lock_based_conc_data::threadsafe_queue_shared_ptr<std::function<void()>> work_queue;
-    std::vector<std::thread> threads;
-    design_conc_code::join_threads joiner;
+    using TASK_TYPE = function<void()>;
+
+    atomic_bool                                                         m_bDone;
+    lock_based_conc_data::threadsafe_queue_shared_ptr<TASK_TYPE>        m_queueWork;
+    vector<thread>                                                      m_vctThreads;
+    design_conc_code::join_threads                                      m_threadJoiner;
 
     void worker_thread() {
-        while (!done) {
-            std::function<void()> task;
-            if (work_queue.try_pop(task)) {
+        while (!m_bDone) {
+            TASK_TYPE task;
+            if (m_queueWork.try_pop(task)) {
                 task();
-            } else {
-                std::this_thread::yield();
-                common_fun::sleep(ONE);
             }
+            yield();
         }
     }
 
 public:
-    simple_thread_pool() : done(false), joiner(threads) {
+    simple_thread_pool() : m_bDone(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        unsigned const thread_count = std::thread::hardware_concurrency();
+        auto const& thread_count = thread::hardware_concurrency();
         try {
             for (unsigned i = 0; i < thread_count; ++i) {
-                threads.push_back(std::thread(&simple_thread_pool::worker_thread, this));
+                m_vctThreads.push_back(thread(&simple_thread_pool::worker_thread, this));
             }
         } catch (...) {
-            done = true;
+            ERR("catch...");
+            m_bDone = true;
             throw;
         }
     }
     ~simple_thread_pool() {
         TICK();
-        done = true;
+        m_bDone = true;
     }
+
     template<typename FunctionType>
     void submit(FunctionType f) {
         TICK();
-        work_queue.push(std::function<void()>(f));
+        m_queueWork.push(TASK_TYPE(f));
     }
 };
-void simple_thread_pool_test();
+void test_simple_thread_pool();
 
 //9.1.2 Waiting for tasks submitted to a thread pool
 //Listing 9.2 A thread pool with waitable tasks
@@ -69,11 +71,11 @@ class function_wrapper {
         virtual void call() = 0;
         virtual ~impl_base() {}
     };
-    std::unique_ptr<impl_base> impl;
+    unique_ptr<impl_base> impl;
     template<typename F>
     struct impl_type : impl_base {
         F f;
-        explicit impl_type(F&& f_) : f(std::move(f_)) {}
+        explicit impl_type(F&& f_) : f(move(f_)) {}
         void call() {
             TICK();
             f();
@@ -82,13 +84,13 @@ class function_wrapper {
 
 public:
     template<typename F>
-    explicit function_wrapper(F&& f) : impl(new impl_type<F>(std::move(f))) {}
+    explicit function_wrapper(F&& f) : impl(new impl_type<F>(move(f))) {}
     void operator()() { impl->call(); }
     function_wrapper() = default;
-    function_wrapper(function_wrapper&& other) : impl(std::move(other.impl)) {}
+    function_wrapper(function_wrapper&& other) : impl(move(other.impl)) {}
     function_wrapper& operator=(function_wrapper&& other) {
         TICK();
-        impl = std::move(other.impl);
+        impl = move(other.impl);
         return *this;
     }
     function_wrapper(const function_wrapper&) = delete;
@@ -96,9 +98,9 @@ public:
     function_wrapper& operator=(const function_wrapper&) = delete;
 };
 class thread_pool {
-    std::atomic_bool done;
+    atomic_bool done;
     lock_based_conc_data::threadsafe_queue<function_wrapper> work_queue;
-    std::vector<std::thread> threads;
+    vector<thread> threads;
     design_conc_code::join_threads joiner;
     void worker_thread() {
         TICK();
@@ -108,7 +110,7 @@ class thread_pool {
             if (work_queue.try_pop(task)) {
                 task();
             } else {
-                std::this_thread::yield();
+                yield();
                 common_fun::sleep(ONE);
             }
         }
@@ -117,10 +119,10 @@ class thread_pool {
 public:
     thread_pool() : done(false), joiner(threads) {
         TICK();
-        unsigned const thread_count = std::thread::hardware_concurrency();
+        unsigned const thread_count = thread::hardware_concurrency();
         try {
             for (unsigned i = 0; i < thread_count; ++i) {
-                threads.push_back(std::thread(&thread_pool::worker_thread, this));
+                threads.push_back(thread(&thread_pool::worker_thread, this));
             }
         } catch (...) {
             done = true;
@@ -132,13 +134,13 @@ public:
         done = true;
     }
     template<typename F, typename...Args>
-    std::future<typename std::result_of<F(Args...)>::type> submit(F&& f, Args&&...args) {
+    future<typename result_of<F(Args...)>::type> submit(F&& f, Args&&...args) {
         TICK();
-        typedef typename std::result_of<F(Args...)>::type result_type;
+        typedef typename result_of<F(Args...)>::type result_type;
 
-        std::packaged_task<result_type(Args...)> task(std::move(f));
-        std::future<result_type> res(task.get_future());
-        work_queue.push(function_wrapper(std::move(task)));
+        packaged_task<result_type(Args...)> task(move(f));
+        future<result_type> res(task.get_future());
+        work_queue.push(function_wrapper(move(task)));
         return res;
     }
     //9.1.3 Tasks that wait for other tasks
@@ -149,7 +151,7 @@ public:
         if (work_queue.try_pop(task)) {
             task();
         } else {
-            std::this_thread::yield();
+            yield();
         }
     }
 };
@@ -160,29 +162,29 @@ int task3(int a, int b);
 template<typename Iterator, typename T>
 T task4(Iterator first, Iterator last) {
     TICK();
-    return std::accumulate(first, last, T());
+    return accumulate(first, last, T());
 }
 template<typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
-    unsigned long const length = std::distance(first, last);
+    unsigned long const length = distance(first, last);
     if (!length) {
         return init;
     }
     unsigned long const block_size = 25;
     unsigned long const num_blocks = (length + block_size - 1) / block_size;
 
-    std::vector<std::future<T>> futures(num_blocks - 1);
+    vector<future<T>> futures(num_blocks - 1);
     thread_pool pool;
     Iterator block_start = first;
     for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
         Iterator block_end = block_start;
-        std::advance(block_end, block_size);
+        advance(block_end, block_size);
 #if 0//exist compile error
-        typedef std::function<int(int, int)> Func;
+        typedef function<int(int, int)> Func;
         futures[i] = pool.submit<Func>(design_conc_code::accumulate_block<Iterator, T>());
 #else//only 'void()' can be compiled correctly
-        typedef std::function<void()> Func;
+        typedef function<void()> Func;
         pool.submit<Func>(&task2);
 #endif
         block_start = block_end;
@@ -201,25 +203,25 @@ void parallel_accumulate_test();
 template<typename T>
 struct sorter {
     thread_pool pool;
-    std::list<T> do_sort(std::list<T>& chunk_data) {
+    list<T> do_sort(list<T>& chunk_data) {
         if (chunk_data.empty()) {
             return chunk_data;
         }
-        std::list<T> result;
+        list<T> result;
         result.splice(result.begin(), chunk_data, chunk_data.begin());
         T const& partition_val = *result.begin();
-        typename std::list<T>::iterator divide_point = std::partition(chunk_data.begin(), chunk_data.end(),
+        typename list<T>::iterator divide_point = partition(chunk_data.begin(), chunk_data.end(),
             [&](T const& val) {return val < partition_val; });
 
-        std::list<T> new_lower_chunk;
+        list<T> new_lower_chunk;
         new_lower_chunk.splice(new_lower_chunk.end(), chunk_data, chunk_data.begin(), divide_point);
-        std::future<std::list<T>> new_lower =
-            pool.submit(std::bind(&sorter::do_sort, this, std::move(new_lower_chunk)));
+        future<list<T>> new_lower =
+            pool.submit(bind(&sorter::do_sort, this, move(new_lower_chunk)));
 
-        std::list<T> new_higher(do_sort(chunk_data));
+        list<T> new_higher(do_sort(chunk_data));
         result.splice(result.end(), new_higher);
 
-        while (new_lower.wait_for(std::chrono::seconds(0)) != std::future_status::timeout) {
+        while (new_lower.wait_for(seconds(0)) != future_status::timeout) {
             pool.running_pending_task();
         }
         result.splice(result.begin(), new_lower.get());
@@ -227,7 +229,7 @@ struct sorter {
     }
 };
 template<typename T>
-std::list<T> parallel_quick_sort(std::list<T> input) {
+list<T> parallel_quick_sort(list<T> input) {
     TICK();
     if (input.empty()) {
         return input;
@@ -241,9 +243,9 @@ void parallel_quick_sort_test();
 class thread_pool_local {
     lock_based_conc_data::threadsafe_queue<function_wrapper> pool_work_queue;
 
-    std::atomic_bool done;
-    typedef std::queue<function_wrapper> local_queue_type;
-    static thread_local std::unique_ptr<local_queue_type> local_work_queue;
+    atomic_bool done;
+    typedef queue<function_wrapper> local_queue_type;
+    static thread_local unique_ptr<local_queue_type> local_work_queue;
 
     void worker_thread() {
         TICK();
@@ -262,16 +264,16 @@ public:
         done = true;
     }
     template<typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f) {
+    future<typename result_of<FunctionType()>::type> submit(FunctionType f) {
         TICK();
-        typedef typename std::result_of<FunctionType()>::type result_type;
+        typedef typename result_of<FunctionType()>::type result_type;
 
-        std::packaged_task<result_type()> task(f);
-        std::future<result_type> res(task.get_future());
+        packaged_task<result_type()> task(f);
+        future<result_type> res(task.get_future());
         if (local_work_queue) {
-            local_work_queue->push(std::move(task));
+            local_work_queue->push(move(task));
         } else {
-            pool_work_queue.push(std::move(task));
+            pool_work_queue.push(move(task));
         }
         return res;
     }
@@ -279,13 +281,13 @@ public:
         TICK();
         function_wrapper task;
         if (local_work_queue && !local_work_queue->empty()) {
-            task = std::move(local_work_queue->front());
+            task = move(local_work_queue->front());
             local_work_queue->pop();
             task();
         } else if (pool_work_queue.try_pop(task)) {
             task();
         } else {
-            std::this_thread::yield();
+            yield();
         }
     }
 };
@@ -294,38 +296,38 @@ public:
 class work_stealing_queue {
 private:
     typedef function_wrapper data_type;
-    std::deque<data_type> the_queue;
-    mutable std::mutex the_mutex;
+    deque<data_type> the_queue;
+    mutable mutex the_mutex;
 
 public:
     work_stealing_queue() {}
     work_stealing_queue& operator=(const work_stealing_queue& other) = delete;
     void push(data_type data) {
         TICK();
-        std::lock_guard<std::mutex> lock(the_mutex);
-        the_queue.push_front(std::move(data));
+        lock_guard<mutex> lock(the_mutex);
+        the_queue.push_front(move(data));
     }
     bool empty() const {
         TICK();
-        std::lock_guard<std::mutex> lock(the_mutex);
+        lock_guard<mutex> lock(the_mutex);
         return the_queue.empty();
     }
     bool try_pop(data_type& res) {
         TICK();
-        std::lock_guard<std::mutex> lock(the_mutex);
+        lock_guard<mutex> lock(the_mutex);
         if (the_queue.empty()) {
             return false;
         }
-        res = std::move(the_queue.front());
+        res = move(the_queue.front());
         the_queue.pop_front();
         return true;
     }
     bool try_steal(data_type& res) {
-        std::lock_guard<std::mutex> lock(the_mutex);
+        lock_guard<mutex> lock(the_mutex);
         if (the_queue.empty()) {
             return false;
         }
-        res = std::move(the_queue.back());
+        res = move(the_queue.back());
         the_queue.pop_back();
         return true;
     }
@@ -335,10 +337,10 @@ public:
 class thread_pool_steal {
     typedef function_wrapper task_type;
 
-    std::atomic<bool> done;
+    atomic<bool> done;
     lock_based_conc_data::threadsafe_queue<task_type> pool_work_queue;
-    std::vector<std::unique_ptr<work_stealing_queue>> queues;
-    std::vector<std::thread> threads;
+    vector<unique_ptr<work_stealing_queue>> queues;
+    vector<thread> threads;
     design_conc_code::join_threads joiner;
 
     static thread_local work_stealing_queue* local_work_queue;
@@ -374,11 +376,11 @@ class thread_pool_steal {
 public:
     thread_pool_steal() : done(false), joiner(threads) {
         TICK();
-        unsigned const thread_count = std::thread::hardware_concurrency();
+        unsigned const thread_count = thread::hardware_concurrency();
         try {
             for (unsigned i = 0; i < thread_count; ++i) {
-                queues.push_back(std::unique_ptr<work_stealing_queue>(new work_stealing_queue));
-                threads.push_back(std::thread(&thread_pool_steal::worker_thread, this, i));
+                queues.push_back(unique_ptr<work_stealing_queue>(new work_stealing_queue));
+                threads.push_back(thread(&thread_pool_steal::worker_thread, this, i));
             }
         } catch (...) {
             done = true;
@@ -389,16 +391,16 @@ public:
         done = true;
     }
     template<typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f) {
+    future<typename result_of<FunctionType()>::type> submit(FunctionType f) {
         TICK();
-        typedef typename std::result_of<FunctionType()>::type result_type;
+        typedef typename result_of<FunctionType()>::type result_type;
 
-        std::packaged_task<result_type()> task(f);
-        std::future<result_type> res(task.get_future());
+        packaged_task<result_type()> task(f);
+        future<result_type> res(task.get_future());
         if (local_work_queue) {
-            local_work_queue->push(std::move(task));
+            local_work_queue->push(move(task));
         } else {
-            pool_work_queue.push(std::move(task));
+            pool_work_queue.push(move(task));
         }
         return res;
     }
@@ -410,7 +412,7 @@ public:
             pop_task_from_other_thread_queue(task)) {
             task();
         } else {
-            std::this_thread::yield();
+            yield();
         }
     }
 };
@@ -419,13 +421,13 @@ public:
 //9.2.1 Launching and interrupting another thread
 //Listing 9.9 Basic implementation of interruptible_thread
 class interrupt_flag {
-    std::atomic<bool> flag = false;
+    atomic<bool> flag = false;
 public:
     void set();
     bool is_set() const;
 };
 class interruptible_thread {
-    std::thread internal_thread;
+    thread internal_thread;
     interrupt_flag* flag;
 public:
     template<typename FunctionType>
@@ -441,50 +443,50 @@ void interruption_point();
 void interruptible_thread_test();
 
 //9.2.3 Interrupting a condition variable wait
-//Listing 9.10 A broken version of interruptible_wait for std::condition_variable
-//Listing 9.11 Using a timeout in interruptible_wait for std::condition_variable
+//Listing 9.10 A broken version of interruptible_wait for condition_variable
+//Listing 9.11 Using a timeout in interruptible_wait for condition_variable
 class interrupt_flag_cv {
-    std::atomic<bool> flag;
-    std::condition_variable* thread_cond;
-    std::mutex set_clear_mutex;
+    atomic<bool> flag;
+    condition_variable* thread_cond;
+    mutex set_clear_mutex;
 public:
     interrupt_flag_cv();
     void set();
     bool is_set() const;
-    void set_condition_variable(std::condition_variable& cv);
+    void set_condition_variable(condition_variable& cv);
     void clear_condition_variable();
     struct clear_cv_on_destruct {
         ~clear_cv_on_destruct();
     };
 };
 void interruption_point_cv();
-void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk);
+void interruptible_wait(condition_variable& cv, unique_lock<mutex>& lk);
 template<typename Predicate>
-void interruptible_wait(std::condition_variable& cv, std::unique_lock<std::mutex>& lk, Predicate pred);
+void interruptible_wait(condition_variable& cv, unique_lock<mutex>& lk, Predicate pred);
 
-//9.2.4 Interrupting a wait on std::condition_variable_any
-//Listing 9.12 interruptible_wait for std::condition_variable_any
+//9.2.4 Interrupting a wait on condition_variable_any
+//Listing 9.12 interruptible_wait for condition_variable_any
 class interrupt_flag_cva {
-    std::atomic<bool> flag;
-    std::condition_variable* thread_cond;
-    std::condition_variable_any* thread_cond_any;
-    std::mutex set_clear_mutex;
+    atomic<bool> flag;
+    condition_variable* thread_cond;
+    condition_variable_any* thread_cond_any;
+    mutex set_clear_mutex;
 public:
     interrupt_flag_cva();
     void set();
     bool is_set() const;
     template<typename Lockable>
-    void wait(std::condition_variable_any& cv, Lockable& lk);
-    void set_condition_variable(std::condition_variable& cv);
+    void wait(condition_variable_any& cv, Lockable& lk);
+    void set_condition_variable(condition_variable& cv);
     void clear_condition_variable();
 };
 void interruption_point_cva();
 template<typename Lockable>
-void interruptible_wait(std::condition_variable_any& cv, Lockable& lk);
+void interruptible_wait(condition_variable_any& cv, Lockable& lk);
 
 //9.2.5 Interrupting other blocking calls
 template<typename T>
-void interruptible_wait(std::future<T>& uf);
+void interruptible_wait(future<T>& uf);
 
 //9.2.6 Handling interruptions
 
