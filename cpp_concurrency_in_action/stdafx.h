@@ -58,6 +58,10 @@ using std::this_thread::sleep_for;
 using std::this_thread::sleep_until;
 using std::this_thread::yield;
 
+using std::chrono::seconds;
+using std::chrono::milliseconds;
+using std::chrono::microseconds;
+
 using std::move;
 using std::forward;
 

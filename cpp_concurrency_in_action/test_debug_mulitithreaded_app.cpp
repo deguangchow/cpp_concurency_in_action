@@ -15,34 +15,37 @@ namespace test_debug_mulitithread {
 
 void test_concurrent_push_and_pop_on_empty_queue() {
     TICK();
-    lock_based_conc_data::threadsafe_queue<int> q;
+    lock_based_conc_data::threadsafe_queue<int> threadsafe_queue_;
 
-    std::promise<void> go, push_ready, pop_ready;
-    std::shared_future<void> ready(go.get_future());
+    std::promise<void>                          promise_go, promise_push, promise_pop;
+    std::shared_future<void>                    future_go(promise_go.get_future());
 
-    std::future<void> push_done;
-    std::future<std::shared_ptr<int>> pop_done;
+    std::future<void>                           future_push_done;
+    std::future<std::shared_ptr<int>>           future_pop_done;
 
     try {
-        push_done = std::async(std::launch::async, [&q, ready, &push_ready]() {
-            push_ready.set_value();
-            ready.wait();
-            q.push(42);
+        future_push_done = std::async(std::launch::async, [&threadsafe_queue_, future_go, &promise_push]() {
+            promise_push.set_value();
+            future_go.wait();
+            DEBUG("async push");
+            threadsafe_queue_.push(42);
         });
-        pop_done = std::async(std::launch::async, [&q, ready, &pop_ready]() {
-            pop_ready.set_value();
-            ready.wait();
-            return q.try_pop();
+        future_pop_done = std::async(std::launch::async, [&threadsafe_queue_, future_go, &promise_pop]() {
+            promise_pop.set_value();
+            future_go.wait();
+            //sleep_for(milliseconds(1));
+            DEBUG("async pop");
+            return threadsafe_queue_.try_pop();
         });
-        push_ready.get_future().wait();
-        pop_ready.get_future().wait();
-        go.set_value();
+        promise_push.get_future().wait();
+        promise_pop.get_future().wait();
+        promise_go.set_value();
 
-        push_done.get();
-        assert(*(pop_done.get()) == 42);
-        assert(q.empty());
+        future_push_done.get();
+        assert(*(future_pop_done.get()) == 42);
+        assert(threadsafe_queue_.empty());
     } catch (...) {
-        go.set_value();
+        promise_go.set_value();
         throw;
     }
 }
