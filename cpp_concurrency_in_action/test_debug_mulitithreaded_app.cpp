@@ -17,23 +17,23 @@ void test_concurrent_push_and_pop_on_empty_queue() {
     TICK();
     lock_based_conc_data::threadsafe_queue<int> threadsafe_queue_;
 
-    std::promise<void>                          promise_go, promise_push, promise_pop;
-    std::shared_future<void>                    future_go(promise_go.get_future());
+    promise<void>                               promise_go, promise_push, promise_pop;
+    shared_future<void>                         future_go(promise_go.get_future());
 
-    std::future<void>                           future_push_done;
-    std::future<std::shared_ptr<int>>           future_pop_done;
+    future<void>                                future_push_done;
+    future<shared_ptr<int>>                     future_pop_done;
 
     try {
-        future_push_done = std::async(std::launch::async, [&threadsafe_queue_, future_go, &promise_push]() {
+        future_push_done = async(launch::async, [&threadsafe_queue_, future_go, &promise_push]() {
             promise_push.set_value();
             future_go.wait();
             DEBUG("async push");
             threadsafe_queue_.push(42);
         });
-        future_pop_done = std::async(std::launch::async, [&threadsafe_queue_, future_go, &promise_pop]() {
+        future_pop_done = async(launch::async, [&threadsafe_queue_, future_go, &promise_pop]() {
             promise_pop.set_value();
             future_go.wait();
-            //sleep_for(milliseconds(1));
+            sleep_for(milliseconds(1));
             DEBUG("async pop");
             return threadsafe_queue_.try_pop();
         });

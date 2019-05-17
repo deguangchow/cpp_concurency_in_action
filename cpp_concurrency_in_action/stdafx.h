@@ -51,12 +51,16 @@ using std::condition_variable_any;
 using std::lock_guard;
 using std::unique_lock;
 using std::future;
+using std::shared_future;
 using std::promise;
 using std::packaged_task;
 using std::this_thread::get_id;
 using std::this_thread::sleep_for;
 using std::this_thread::sleep_until;
 using std::this_thread::yield;
+
+using std::async;
+using std::launch;
 
 using std::chrono::seconds;
 using std::chrono::milliseconds;
