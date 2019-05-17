@@ -13,62 +13,63 @@ namespace messaging {
 
 
 template<typename T>
-void queue::push(T const& msg) {
+void threadsafe_queue::push(T const& msg) {
     TICK();
-    std::lock_guard<std::mutex> lk(m);
-    q.push(std::make_shared<wrapped_message<T>>(msg));
-    c.notify_all();
+    lock_guard<mutex> lk(m_mutex);
+    m_queueMessage.push(make_shared<wrapped_message<T>>(msg));
+    m_conditonVariable.notify_all();
 }
-std::shared_ptr<message_base> queue::wait_and_pop() {
+shared_ptr<message_base> threadsafe_queue::wait_and_pop() {
     TICK();
-    std::unique_lock<std::mutex> lk(m);
-    c.wait(lk, [&] {return !q.empty(); });
-    auto res = q.front();
-    q.pop();
+    unique_lock<mutex> lk(m_mutex);
+    m_conditonVariable.wait(lk, [&] {return !m_queueMessage.empty(); });
+    auto res = m_queueMessage.front();
+    m_queueMessage.pop();
     return res;
 }
 
 receiver::operator sender() {
     TICK();
-    return sender(&q);
+    return sender(&m_queueMessage);
 }
-messaging::dispatcher receiver::wait() {
+dispatcher receiver::wait() {
     TICK();
-    return dispatcher(&q);
+    return dispatcher(&m_queueMessage);
 }
 
 
-sender::sender(queue* q_) : q(q_) {
+sender::sender(threadsafe_queue* q_) : m_pQueueMessage(q_) {
 }
-sender::sender() : q(nullptr) {
+sender::sender() : m_pQueueMessage(nullptr) {
 }
 template<typename Message>
 void sender::send(Message const& msg) {
     TICK();
-    if (q) {
-        q->push(msg);
+    if (m_pQueueMessage) {
+        m_pQueueMessage->push(msg);
     }
 }
 
-dispatcher::dispatcher(queue* q_) :q(q_), chained(false) {
+dispatcher::dispatcher(threadsafe_queue* q_) :m_pQueueMessage(q_), m_bChained(false) {
 }
-dispatcher::dispatcher(dispatcher&& other) : q(other.q), chained(other.chained) {
-    other.chained = true;
+dispatcher::dispatcher(dispatcher&& other) : m_pQueueMessage(other.m_pQueueMessage), m_bChained(other.m_bChained) {
+    other.m_bChained = true;
 }
 void dispatcher::wait_and_dispatch() {
     TICK();
     try {
         for (;;) {
-            auto msg = q->wait_and_pop();
+            auto msg = m_pQueueMessage->wait_and_pop();
             dispatch(msg);
+            yield();
         }
-    } catch (messaging::close_queue const&) {
+    } catch (close_queue const&) {
         INFO("catch close_queue");
     } catch (...) {
         INFO("catch ...");
     }
 }
-bool dispatcher::dispatch(std::shared_ptr<message_base> const& msg) {
+bool dispatcher::dispatch(shared_ptr<message_base> const& msg) {
     TICK();
     if (dynamic_cast<wrapped_message<close_queue>*>(msg.get())) {
         throw close_queue();
@@ -79,197 +80,200 @@ template<typename Message, typename Func>
 TemplateDispatcher<dispatcher, Message, Func>
 dispatcher::handle(Func&& f) {
     TICK();
-    return TemplateDispatcher<dispatcher, Message, Func>(q, this, std::forward<Func>(f));
+    return TemplateDispatcher<dispatcher, Message, Func>(m_pQueueMessage, this, forward<Func>(f));
 }
 dispatcher::~dispatcher() noexcept(false) {
-    if (!chained) {
+    if (!m_bChained) {
         wait_and_dispatch();
     }
 }
 
 //Listing C.7 The ATM state machine
-void atm::getting_amount() {
+void atm_state_machine::getting_amount() {
     TICK();
-    incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
-        withdrawal_amount *= 10;
-        withdrawal_amount += (msg.digit - '0');
+    m_receiverInComing.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
+        m_uWithdrawalAmount *= 10;
+        m_uWithdrawalAmount += (msg.digit - '0');
     }).handle<clear_last_pressed>([&](clear_last_pressed const& msg) {
-        withdrawal_amount /= 10;
+        m_uWithdrawalAmount /= 10;
     }).handle<ok_pressed>([&](ok_pressed const& msg) {
-        bank.send(withdraw(account, withdrawal_amount, incoming));
-        state = &atm::process_withdrawal;
+        m_senderBank.send(withdraw(m_sAccount, m_uWithdrawalAmount, m_receiverInComing));
+        m_fpState = &atm_state_machine::process_withdrawal;
     }).handle<cancel_pressed>([&](cancel_pressed const&) {
-        state = &atm::done_processing;
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::process_withdrawal() {
+void atm_state_machine::process_withdrawal() {
     TICK();
-    incoming.wait().handle<withdraw_ok>([&](withdraw_ok const& msg) {
-        interface_hardware.send(issue_money(withdrawal_amount));
-        state = &atm::continue_processing;
+    m_receiverInComing.wait().handle<withdraw_ok>([&](withdraw_ok const& msg) {
+        m_senderUI.send(issue_money(m_uWithdrawalAmount));
+        m_fpState = &atm_state_machine::continue_processing;
     }).handle<withdraw_denied>([&](withdraw_denied const& msg) {
-        interface_hardware.send(display_insufficient_funds());
-        state = &atm::continue_processing;
+        m_senderUI.send(display_insufficient_funds());
+        m_fpState = &atm_state_machine::continue_processing;
     }).handle<cancel_pressed>([&](cancel_pressed const& msg) {
-        bank.send(cancel_withdrawal(account, withdrawal_amount));
-        interface_hardware.send(display_withdrawal_cancelled());
-        state = &atm::done_processing;
+        m_senderBank.send(cancel_withdrawal(m_sAccount, m_uWithdrawalAmount));
+        m_senderUI.send(display_withdrawal_cancelled());
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::process_balance() {
+void atm_state_machine::process_balance() {
     TICK();
-    incoming.wait().handle<balance>([&](balance const& msg) {
-        interface_hardware.send(display_balance(msg.amount));
-        state = &atm::wait_for_action;
+    m_receiverInComing.wait().handle<balance>([&](balance const& msg) {
+        m_senderUI.send(display_balance(msg.amount));
+        m_fpState = &atm_state_machine::wait_for_action;
     }).handle<cancel_pressed>([&](cancel_pressed const& msg) {
-        state = &atm::done_processing;
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::wait_for_action() {
+void atm_state_machine::wait_for_action() {
     TICK();
-    interface_hardware.send(display_withdrawal_options());
-    incoming.wait().handle<withdraw_amount_processed>([&](withdraw_amount_processed const& msg) {
-        interface_hardware.send(display_withdrawal_amount());
-        state = &atm::getting_amount;
+    m_senderUI.send(display_withdrawal_options());
+    m_receiverInComing.wait().handle<withdraw_amount_processed>([&](withdraw_amount_processed const& msg) {
+        m_senderUI.send(display_withdrawal_amount());
+        m_fpState = &atm_state_machine::getting_amount;
     }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
-        withdrawal_amount = msg.amount;
-        bank.send(withdraw(account, msg.amount, incoming));
-        state = &atm::process_withdrawal;
+        m_uWithdrawalAmount = msg.amount;
+        m_senderBank.send(withdraw(m_sAccount, msg.amount, m_receiverInComing));
+        m_fpState = &atm_state_machine::process_withdrawal;
     }).handle<balance_pressed>([&](balance_pressed const& msg) {
-        bank.send(get_balance(account, incoming));
-        state = &atm::process_balance;
+        m_senderBank.send(get_balance(m_sAccount, m_receiverInComing));
+        m_fpState = &atm_state_machine::process_balance;
     }).handle<cancel_pressed>([&](cancel_pressed const& msg) {
-        state = &atm::done_processing;
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::verifying_pin() {
+void atm_state_machine::verifying_pin() {
     TICK();
-    incoming.wait().handle<pin_verified>([&](pin_verified const& msg) {
-        state = &atm::wait_for_action;
+    m_receiverInComing.wait().handle<pin_verified>([&](pin_verified const& msg) {
+        m_fpState = &atm_state_machine::wait_for_action;
     }).handle<pin_incorrect>([&](pin_incorrect const& msg) {
-        interface_hardware.send(display_pin_incorrect_message());
-        state = &atm::done_processing;
+        m_senderUI.send(display_pin_incorrect_message());
+        m_fpState = &atm_state_machine::done_processing;
     }).handle<cancel_pressed>([&](cancel_pressed const& msg) {
-        state = &atm::done_processing;
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::getting_pin() {
+void atm_state_machine::getting_pin() {
     TICK();
-    incoming.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
-        pin += msg.digit;
+    m_receiverInComing.wait().handle<digit_pressed>([&](digit_pressed const& msg) {
+        m_sPIN += msg.digit;
     }).handle<clear_last_pressed>([&](clear_last_pressed const& msg) {
-        if (!pin.empty()) {
-            pin.pop_back();
+        if (!m_sPIN.empty()) {
+            m_sPIN.pop_back();
         }
     }).handle<ok_pressed>([&](ok_pressed const& msg) {
-        bank.send(verify_pin(account, pin, incoming));
-        state = &atm::verifying_pin;
+        m_senderBank.send(verify_pin(m_sAccount, m_sPIN, m_receiverInComing));
+        m_fpState = &atm_state_machine::verifying_pin;
     }).handle<cancel_pressed>([&](cancel_pressed const&) {
-        state = &atm::done_processing;
+        m_fpState = &atm_state_machine::done_processing;
     });
 }
-void atm::waiting_for_card() {
+void atm_state_machine::waiting_for_card() {
     TICK();
-    interface_hardware.send(display_enter_card());
-    incoming.wait().handle<card_inserted>([&](card_inserted const& msg) {
-        account = msg.account;
-        pin = "";
-        interface_hardware.send(display_enter_pin());
-        state = &atm::getting_pin;
+    m_senderUI.send(display_enter_card());
+    m_receiverInComing.wait().handle<card_inserted>([&](card_inserted const& msg) {
+        m_sAccount = msg.account;
+        m_sPIN = "";
+        m_senderUI.send(display_enter_pin());
+        m_fpState = &atm_state_machine::getting_pin;
     });
 }
-void atm::done_processing() {
+void atm_state_machine::done_processing() {
     TICK();
-    interface_hardware.send(eject_card());
-    state = &atm::waiting_for_card;
+    m_senderUI.send(eject_card());
+    m_fpState = &atm_state_machine::waiting_for_card;
 }
-void atm::continue_processing() {
+void atm_state_machine::continue_processing() {
     TICK();
-    state = &atm::wait_for_action;
+    m_fpState = &atm_state_machine::wait_for_action;
 }
-atm::atm(messaging::sender bank_, messaging::sender interface_hardware_) :
-    bank(bank_), interface_hardware(interface_hardware_) {
-    state = nullptr;
-    withdrawal_amount = 0;
+atm_state_machine::atm_state_machine(sender bank_, sender ui_) :
+    m_senderBank(bank_), m_senderUI(ui_) {
+    m_fpState = nullptr;
+    m_fpTest = nullptr;
+    m_uWithdrawalAmount = 0;
 }
-void atm::done() {
+void atm_state_machine::done() {
     TICK();
-    get_sender().send(messaging::close_queue());
+    get_sender().send(close_queue());
 }
-void atm::run() {
+void atm_state_machine::run() {
     TICK();
-    state = &atm::waiting_for_card;
+    m_fpState = &atm_state_machine::waiting_for_card;
     try {
         for (;;) {
-            (this->*state)();
+            (this->*m_fpState)();
+            yield();
         }
-    } catch (messaging::close_queue const&) {
+    } catch (close_queue const&) {
         INFO("catch close_queue");
     } catch (...) {
         ERR("catch...");
     }
 }
-messaging::sender atm::get_sender() {
+sender atm_state_machine::get_sender() {
     TICK();
-    return incoming;
+    return m_receiverInComing;
 }
 
 //Listing C.8 The bank state machine
-bank_machine::bank_machine() :_balance(199) {
-    state = nullptr;
+bank_state_machine::bank_state_machine() :m_uBalance(199) {
+    m_fpState = nullptr;
 }
-void bank_machine::wait_for_action() {
-    incoming.wait().handle<verify_pin>([&](verify_pin const& msg) {
+void bank_state_machine::wait_for_action() {
+    m_receiverIncoming.wait().handle<verify_pin>([&](verify_pin const& msg) {
         if (msg.pin == "1937") {
             msg.atm_queue.send(pin_verified());
         } else {
             msg.atm_queue.send(pin_incorrect());
         }
     }).handle<withdraw>([&](withdraw const& msg) {
-        if (_balance >= msg.amount) {
+        if (m_uBalance >= msg.amount) {
             msg.atm_queue.send(withdraw_ok());
-            _balance -= msg.amount;
+            m_uBalance -= msg.amount;
         } else {
             msg.atm_queue.send(withdraw_denied());
         }
     }).handle<get_balance>([&](get_balance const& msg) {
-        msg.atm_queue.send(messaging::balance(_balance));
+        msg.atm_queue.send(balance(m_uBalance));
     }).handle<withdraw_processed>([&](withdraw_processed const& msg) {
     }).handle<cancel_withdrawal>([&](cancel_withdrawal const& msg) {
     });
 }
-void bank_machine::done() {
+void bank_state_machine::done() {
     TICK();
-    get_sender().send(messaging::close_queue());
+    get_sender().send(close_queue());
 }
-void bank_machine::run() {
+void bank_state_machine::run() {
     TICK();
-    state = &bank_machine::wait_for_action;
+    m_fpState = &bank_state_machine::wait_for_action;
     try {
         for (;;) {
-            (this->*state)();
+            (this->*m_fpState)();
+            yield();
         }
-    } catch (messaging::close_queue const&) {
+    } catch (close_queue const&) {
         INFO("catch close_queue");
     } catch (...) {
         ERR("catch ...");
     }
 }
-messaging::sender bank_machine::get_sender() {
+sender bank_state_machine::get_sender() {
     TICK();
-    return incoming;
+    return m_receiverIncoming;
 }
 
 //Listing C.9 The user-interface state machine
-interface_machine::interface_machine() {
-    state = nullptr;
+ui_state_machine::ui_state_machine() {
+    m_fpState = nullptr;
 }
-void interface_machine::done() {
+void ui_state_machine::done() {
     TICK();
-    get_sender().send(messaging::close_queue());
+    get_sender().send(close_queue());
 }
-void interface_machine::wait_for_show() {
-    incoming.wait().handle<issue_money>([&](issue_money const& msg) {
+void ui_state_machine::wait_for_show() {
+    m_receiverIncoming.wait().handle<issue_money>([&](issue_money const& msg) {
         INFO("Issuing %d", msg.amount);
     }).handle<display_insufficient_funds>([&](display_insufficient_funds const& msg) {
         INFO("Insufficient funds");
@@ -294,36 +298,38 @@ void interface_machine::wait_for_show() {
         INFO("Ejecting card");
     });
 }
-void interface_machine::run() {
+void ui_state_machine::run() {
     TICK();
-    state = &interface_machine::wait_for_show;
+    m_fpState = &ui_state_machine::wait_for_show;
     try {
         for (;;) {
-            (this->*state)();
+            (this->*m_fpState)();
+            yield();
         }
-    } catch (messaging::close_queue&) {
+    } catch (close_queue&) {
         INFO("catch close_queue");
     } catch (...) {
         ERR("catch ...");
     }
 }
-messaging::sender interface_machine::get_sender() {
+sender ui_state_machine::get_sender() {
     TICK();
-    return incoming;
+    return m_receiverIncoming;
 }
 
 //Listing C.10 The driving code
-void atm_messaging_test() {
+void test_atm_messaging() {
     TICK();
-    bank_machine bank;
-    interface_machine interface_hardware;
-    atm machine(bank.get_sender(), interface_hardware.get_sender());
 
-    std::thread bank_thread(&bank_machine::run, &bank);
-    std::thread if_thread(&interface_machine::run, &interface_hardware);
-    std::thread atm_thread(&atm::run, &machine);
+    bank_state_machine bank;
+    ui_state_machine ui;
+    atm_state_machine atm(bank.get_sender(), ui.get_sender());
 
-    messaging::sender atmqueue(machine.get_sender());
+    thread bank_thread(&bank_state_machine::run, &bank);
+    thread ui_thread(&ui_state_machine::run, &ui);
+    thread atm_thread(&atm_state_machine::run, &atm);
+
+    sender incoming_sender(atm.get_sender());
     bool quit_pressed = false;
 
     while (!quit_pressed) {
@@ -339,42 +345,62 @@ void atm_messaging_test() {
         case '7':
         case '8':
         case '9':
-            atmqueue.send(digit_pressed(c));
+            incoming_sender.send(digit_pressed(c));
             break;
         case 'b':
-            atmqueue.send(balance_pressed());
+            incoming_sender.send(balance_pressed());
             break;
         case 'B':
-            atmqueue.send(clear_last_pressed());
+            incoming_sender.send(clear_last_pressed());
             break;
         case 'w':
-            atmqueue.send(withdraw_processed("acc1234", 50));
+            incoming_sender.send(withdraw_processed("acc1234", 50));
             break;
         case 'W':
-            atmqueue.send(withdraw_amount_processed("acc1234"));
+            incoming_sender.send(withdraw_amount_processed("acc1234"));
             break;
         case 'c':
-            atmqueue.send(cancel_pressed());
+            incoming_sender.send(cancel_pressed());
             break;
         case '#':
-            atmqueue.send(ok_pressed());
+            incoming_sender.send(ok_pressed());
             break;
         case 'q':
             quit_pressed = true;
             break;
         case 'i':
-            atmqueue.send(card_inserted("acc1234"));
+            incoming_sender.send(card_inserted("acc1234"));
             break;
         }
+        yield();
     }
 
     bank.done();
-    machine.done();
-    interface_hardware.done();
+    atm.done();
+    ui.done();
 
     atm_thread.join();
     bank_thread.join();
-    if_thread.join();
+    ui_thread.join();
+}
+
+void test_functional_pointer_1() {
+    TICK();
+    sender bank;
+    sender ui;
+    atm_state_machine atm(bank, ui);
+    atm.test_functional_pointer();
+}
+
+void hello() {
+    TICK();
+    DEBUG("hello world");
+}
+void test_functional_pointer_2() {
+    TICK();
+    void(*fp)();
+    fp = &messaging::hello;
+    (*fp)();
 }
 
 }//namespace messaging

@@ -20,22 +20,23 @@ struct wrapped_message : message_base {
     Msg content;
     explicit wrapped_message(Msg const& content_) :content(content_) {}
 };
-class queue {
-    std::mutex m;
-    std::condition_variable c;
-    std::queue<std::shared_ptr<message_base>> q;
+class threadsafe_queue {
+    mutex               m_mutex;
+    condition_variable  m_conditonVariable;
+    queue<shared_ptr<message_base>> m_queueMessage;
 public:
     template<typename T>
     void push(T const& msg);
-    std::shared_ptr<message_base> wait_and_pop();
+    shared_ptr<message_base> wait_and_pop();
 };
 
 //Listing C.2 The sender class
 class sender {
-    queue* q;
+    threadsafe_queue*   m_pQueueMessage;
 public:
     sender();
-    explicit sender(queue* q_);
+    explicit sender(threadsafe_queue* q_);
+
     template<typename Message>
     void send(Message const& msg);
 };
@@ -43,7 +44,7 @@ public:
 //Listing C.3 The receiver class
 class dispatcher;
 class receiver {
-    queue q;
+    threadsafe_queue    m_queueMessage;
 public:
     operator sender();
     dispatcher wait();
@@ -52,29 +53,32 @@ public:
 //Listing C.4 The dispatcher class
 class close_queue {};
 class dispatcher {
-    queue* q;
-    bool chained;
+    threadsafe_queue*   m_pQueueMessage;
+    bool                m_bChained;
     dispatcher(dispatcher const&) = delete;
     dispatcher& operator=(dispatcher const&) = delete;
+
     template<typename Dispatcher, typename Msg, typename Func>
     friend class TemplateDispatcher;
+
     void wait_and_dispatch();
-    bool dispatch(std::shared_ptr<message_base> const& msg);
+    bool dispatch(shared_ptr<message_base> const& msg);
 public:
     dispatcher(dispatcher&& other);
-    explicit dispatcher(queue* q_);
+    explicit dispatcher(threadsafe_queue* q_);
+    ~dispatcher() noexcept(false);
+
     template<typename Message, typename Func>
     TemplateDispatcher<dispatcher, Message, Func> handle(Func&& f);
-    ~dispatcher() noexcept(false);
 };
 
 //Listing C.5 The TemplateDispatcher class template
 template<typename PreviousDispatcher, typename Msg, typename Func>
 class TemplateDispatcher {
-    queue* q;
-    PreviousDispatcher* prev;
-    Func f;
-    bool chained;
+    threadsafe_queue*   m_pQueueMessage;
+    PreviousDispatcher* m_pPreviousDispatcher;
+    Func                m_function;
+    bool                m_bChained;
 
     TemplateDispatcher(TemplateDispatcher const&) = delete;
     TemplateDispatcher& operator=(TemplateDispatcher const&) = delete;
@@ -85,12 +89,13 @@ class TemplateDispatcher {
         TICK();
         try {
             for (;;) {
-                auto msg = q->wait_and_pop();
+                auto msg = m_pQueueMessage->wait_and_pop();
                 if (dispatch(msg)) {
                     break;
                 }
+                yield();
             }
-        } catch (messaging::close_queue const& e) {
+        } catch (close_queue const& e) {
             INFO("catch close_queue, throw it.");
             throw e;
         } catch (...) {
@@ -98,32 +103,34 @@ class TemplateDispatcher {
             throw close_queue();
         }
     }
-    bool dispatch(std::shared_ptr<message_base> const& msg) {
+    bool dispatch(shared_ptr<message_base> const& msg) {
         TICK();
         if (wrapped_message<Msg>* wrapper = dynamic_cast<wrapped_message<Msg>*>(msg.get())) {
-            f(wrapper->content);
+            m_function(wrapper->content);
             return true;
         } else {
-            return prev->dispatch(msg);
+            return m_pPreviousDispatcher->dispatch(msg);
         }
     }
 
 public:
     TemplateDispatcher(TemplateDispatcher&& other) :
-        q(other.q), prev(other.prev), f(std::move(other.f)), chained(other.chained) {
-        other.chained = true;
+        m_pQueueMessage(other.m_pQueueMessage), m_pPreviousDispatcher(other.m_pPreviousDispatcher),
+        m_function(move(other.m_function)), m_bChained(other.m_bChained) {
+        other.m_bChained = true;
     }
-    TemplateDispatcher(queue* q_, PreviousDispatcher* prev_, Func&& f_) :
-        q(q_), prev(prev_), f(std::forward<Func>(f_)), chained(false) {
-        prev_->chained = true;
+    TemplateDispatcher(threadsafe_queue* q_, PreviousDispatcher* prev_, Func&& f_) :
+        m_pQueueMessage(q_), m_pPreviousDispatcher(prev_), m_function(forward<Func>(f_)), m_bChained(false) {
+        prev_->m_bChained = true;
     }
     template<typename OtherMsg, typename OtherFunc>
     TemplateDispatcher<TemplateDispatcher, OtherMsg, OtherFunc> handle(OtherFunc&& of) {
         TICK();
-        return TemplateDispatcher<TemplateDispatcher, OtherMsg, OtherFunc>(q, this, std::forward<OtherFunc>(of));
+        return TemplateDispatcher<TemplateDispatcher, OtherMsg, OtherFunc>
+            (m_pQueueMessage, this, forward<OtherFunc>(of));
     }
     ~TemplateDispatcher() noexcept(false) {
-        if (!chained) {
+        if (!m_bChained) {
             wait_and_dispatch();
         }
     }
@@ -131,32 +138,32 @@ public:
 
 //Listing C.6 ATM message
 struct withdraw {
-    std::string account;
+    string account;
     unsigned amount;
-    mutable messaging::sender atm_queue;
-    withdraw(std::string const& account_, unsigned amount_, messaging::sender atm_queue_) :
+    mutable sender atm_queue;
+    withdraw(string const& account_, unsigned amount_, sender atm_queue_) :
         account(account_), amount(amount_), atm_queue(atm_queue_) {}
 };
 struct withdraw_amount {};
 struct withdraw_ok {};
 struct withdraw_denied {};
 struct cancel_withdrawal {
-    std::string account;
+    string account;
     unsigned amount;
-    cancel_withdrawal(std::string const& account_, unsigned amount_) :account(account_), amount(amount_) {}
+    cancel_withdrawal(string const& account_, unsigned amount_) :account(account_), amount(amount_) {}
 };
 struct withdraw_processed {
-    std::string account;
+    string account;
     unsigned amount;
-    withdraw_processed(std::string const& account_, unsigned amount_) :account(account_), amount(amount_) {}
+    withdraw_processed(string const& account_, unsigned amount_) :account(account_), amount(amount_) {}
 };
 struct withdraw_amount_processed {
-    std::string account;
-    explicit withdraw_amount_processed(std::string const& account_) :account(account_) {}
+    string account;
+    explicit withdraw_amount_processed(string const& account_) :account(account_) {}
 };
 struct card_inserted {
-    std::string account;
-    explicit card_inserted(std::string const& account_) :account(account_) {}
+    string account;
+    explicit card_inserted(string const& account_) :account(account_) {}
 };
 struct digit_pressed {
     char digit;
@@ -175,10 +182,10 @@ struct issue_money {
     explicit issue_money(unsigned amount_) :amount(amount_) {}
 };
 struct verify_pin {
-    std::string acount;
-    std::string pin;
-    mutable messaging::sender atm_queue;
-    verify_pin(std::string const& acount_, std::string const& pin_, messaging::sender atm_queue_) :
+    string acount;
+    string pin;
+    mutable sender atm_queue;
+    verify_pin(string const& acount_, string const& pin_, sender atm_queue_) :
         acount(acount_), pin(pin_), atm_queue(atm_queue_) {}
 };
 struct pin_verified {};
@@ -191,9 +198,9 @@ struct display_pin_incorrect_message {};
 struct display_withdrawal_options {};
 struct display_withdrawal_amount {};
 struct get_balance {
-    std::string account;
-    mutable messaging::sender atm_queue;
-    get_balance(std::string const& account_, messaging::sender atm_queue_) :account(account_), atm_queue(atm_queue_) {}
+    string account;
+    mutable sender atm_queue;
+    get_balance(string const& account_, sender atm_queue_) :account(account_), atm_queue(atm_queue_) {}
 };
 struct balance {
     unsigned amount;
@@ -206,14 +213,18 @@ struct display_balance {
 struct balance_pressed {};
 
 //Listing C.7 The ATM state machine
-class atm {
-    messaging::receiver incoming;
-    messaging::sender bank;
-    messaging::sender interface_hardware;
-    void(atm::*state) ();
-    std::string account;
-    unsigned withdrawal_amount;
-    std::string pin;
+class atm_state_machine {
+    receiver    m_receiverInComing;
+    sender      m_senderBank;
+    sender      m_senderUI;
+
+    //functional pointer member variable, it means that m_fpState point to a function: void f();
+    void(atm_state_machine::* m_fpState) ();
+
+    string      m_sAccount;
+    unsigned    m_uWithdrawalAmount;
+    string      m_sPIN;
+
     void getting_amount();
     void process_withdrawal();
     void process_balance();
@@ -223,43 +234,64 @@ class atm {
     void waiting_for_card();
     void done_processing();
     void continue_processing();
-    atm(atm const&) = delete;
-    atm& operator=(atm const&) = delete;
+    atm_state_machine(atm_state_machine const&) = delete;
+    atm_state_machine& operator=(atm_state_machine const&) = delete;
 
 public:
-    atm(messaging::sender bank_, messaging::sender interface_hardware_);
+    atm_state_machine(sender bank_, sender ui_);
     void done();
     void run();
-    messaging::sender get_sender();
+    sender get_sender();
+
+#if 1
+    int(atm_state_machine::* m_fpTest)(int const&, int const&) const;
+    int sum(int const& a, int const& b) const {
+        TICK();
+        return a + b;
+    }
+    void test_functional_pointer() {
+        TICK();
+        m_fpTest = &atm_state_machine::sum;
+        auto const& a = 1;
+        auto const& b = 2;
+        auto const& c = (this->*m_fpTest)(a, b);
+        DEBUG("sum(%d, %d) = %d", a, b, c);
+    }
+#endif
 };
 
 //Listing C.8 The bank state machine
-class bank_machine {
-    messaging::receiver incoming;
-    unsigned _balance;
-    void(bank_machine::*state)();
+class bank_state_machine {
+    receiver    m_receiverIncoming;
+    unsigned    m_uBalance;
+    void(bank_state_machine::* m_fpState)();
+
     void wait_for_action();
 public:
-    bank_machine();
+    bank_state_machine();
     void done();
     void run();
-    messaging::sender get_sender();
+    sender get_sender();
 };
 
 //Listing C.9 The user-interface state machine
-class interface_machine {
-    messaging::receiver incoming;
-    void(interface_machine::*state)();
+class ui_state_machine {
+    receiver    m_receiverIncoming;
+    void(ui_state_machine::* m_fpState)();
+
     void wait_for_show();
 public:
-    interface_machine();
+    ui_state_machine();
     void done();
     void run();
-    messaging::sender get_sender();
+    sender get_sender();
 };
 
 //Listing C.10 The driving code
-void atm_messaging_test();
+void test_atm_messaging();
+
+void test_functional_pointer_1();
+void test_functional_pointer_2();
 
 }//namespace messaging
 #endif  //MESSAGING_H

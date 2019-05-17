@@ -156,9 +156,10 @@ int main() {
 #endif
 
 #if 0//chapterC
-
+    messaging::test_functional_pointer_1();
+    messaging::test_functional_pointer_2();
+    messaging::test_atm_messaging();
 #endif
-    messaging::atm_messaging_test();
 
     return 0;
 }

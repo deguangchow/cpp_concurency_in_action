@@ -43,5 +43,36 @@
 #include "common_fun.h"
 
 
+//using std::
+using std::thread;
+using std::mutex;
+using std::condition_variable;
+using std::condition_variable_any;
+using std::lock_guard;
+using std::unique_lock;
+using std::future;
+using std::promise;
+using std::packaged_task;
+using std::this_thread::get_id;
+using std::this_thread::sleep_for;
+using std::this_thread::sleep_until;
+using std::this_thread::yield;
+
+using std::move;
+using std::forward;
+
+using std::shared_ptr;
+using std::make_shared;
+using std::unique_ptr;
+using std::make_unique;
+
+using std::string;
+using std::map;
+using std::set;
+using std::queue;
+using std::vector;
+using std::list;
+using std::array;
+
 #endif  //STDAFX_H
 
