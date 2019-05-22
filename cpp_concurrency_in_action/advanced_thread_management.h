@@ -14,23 +14,24 @@
 
 namespace adv_thread_mg {
 
+using TASK_TYPE = function<void()>;
+
+
 //9.1 Thread pools
 //9.1.1 The simplest posible thread pool
 //Listing 9.1 Simple thread pool
 void task1();
 void task2();
 class simple_thread_pool {
-    using TASK_TYPE = function<void()>;
-
-    atomic_bool                                                         m_bDone;
-    lock_based_conc_data::threadsafe_queue_shared_ptr<TASK_TYPE>        m_queueWork;
+    atomic_bool                                                         m_abDone;
+    lock_based_conc_data::threadsafe_queue_shared_ptr<TASK_TYPE>        m_queueTasks;
     vector<thread>                                                      m_vctThreads;
     design_conc_code::join_threads                                      m_threadJoiner;
 
-    void worker_thread() {
-        while (!m_bDone) {
+    void run() {
+        while (!m_abDone) {
             TASK_TYPE task;
-            if (m_queueWork.try_pop(task)) {
+            if (m_queueTasks.try_pop(task)) {
                 task();
             }
             yield();
@@ -38,28 +39,28 @@ class simple_thread_pool {
     }
 
 public:
-    simple_thread_pool() : m_bDone(false), m_threadJoiner(m_vctThreads) {
+    simple_thread_pool() : m_abDone(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        auto const& thread_count = thread::hardware_concurrency();
+        auto const& THREAD_NUMS = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < thread_count; ++i) {
-                m_vctThreads.push_back(thread(&simple_thread_pool::worker_thread, this));
+            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+                m_vctThreads.push_back(thread(&simple_thread_pool::run, this));
             }
         } catch (...) {
             ERR("catch...");
-            m_bDone = true;
+            m_abDone = true;
             throw;
         }
     }
     ~simple_thread_pool() {
         TICK();
-        m_bDone = true;
+        m_abDone = true;
     }
 
     template<typename FunctionType>
     void submit(FunctionType f) {
         TICK();
-        m_queueWork.push(TASK_TYPE(f));
+        m_queueTasks.push(TASK_TYPE(f));
     }
 };
 void test_simple_thread_pool();
@@ -98,40 +99,38 @@ public:
     function_wrapper& operator=(const function_wrapper&) = delete;
 };
 class thread_pool {
-    atomic_bool done;
-    lock_based_conc_data::threadsafe_queue<function_wrapper> work_queue;
-    vector<thread> threads;
-    design_conc_code::join_threads joiner;
-    void worker_thread() {
+    atomic_bool                                                 m_abDone;
+    lock_based_conc_data::threadsafe_queue<function_wrapper>    m_queueTasks;
+    vector<thread>                                              m_vctThreads;
+    design_conc_code::join_threads                              m_threadJoiner;
+    void run() {
         TICK();
-        while (!done) {
-            WARN("worker_thread loop");
+        while (!m_abDone) {
             function_wrapper task;
-            if (work_queue.try_pop(task)) {
+            if (m_queueTasks.try_pop(task)) {
                 task();
             } else {
                 yield();
-                common_fun::sleep(ONE);
             }
         }
     }
 
 public:
-    thread_pool() : done(false), joiner(threads) {
+    thread_pool() : m_abDone(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        unsigned const thread_count = thread::hardware_concurrency();
+        auto const& THREAD_NUMS = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < thread_count; ++i) {
-                threads.push_back(thread(&thread_pool::worker_thread, this));
+            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+                m_vctThreads.push_back(thread(&thread_pool::run, this));
             }
         } catch (...) {
-            done = true;
+            m_abDone = true;
             throw;
         }
     }
     ~thread_pool() {
         TICK();
-        done = true;
+        m_abDone = true;
     }
     template<typename F, typename...Args>
     future<typename result_of<F(Args...)>::type> submit(F&& f, Args&&...args) {
@@ -140,7 +139,7 @@ public:
 
         packaged_task<result_type(Args...)> task(move(f));
         future<result_type> res(task.get_future());
-        work_queue.push(function_wrapper(move(task)));
+        m_queueTasks.push(function_wrapper(move(task)));
         return res;
     }
     //9.1.3 Tasks that wait for other tasks
@@ -148,14 +147,14 @@ public:
     void running_pending_task() {
         TICK();
         function_wrapper task;
-        if (work_queue.try_pop(task)) {
+        if (m_queueTasks.try_pop(task)) {
             task();
         } else {
             yield();
         }
     }
 };
-void thread_pool_test();
+void test_thread_pool();
 
 //Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
 int task3(int a, int b);

@@ -87,20 +87,20 @@ private:
 public:
     threadsafe_queue() {}
     void push(T new_value) {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(mut);
         data_queue.push(std::move(new_value));
         data_cond.notify_one();
     }
     void wait_and_pop(T &value) {
-        TICK();
+        //TICK();
         std::unique_lock<std::mutex> lock(mut);
         data_cond.wait(lock, [this] {return !data_queue.empty(); });
         value = std::move(data_queue.front());
         data_queue.pop();
     }
     std::shared_ptr<T> wait_and_pop() {
-        TICK();
+        //TICK();
         std::unique_lock<std::mutex> lock(mut);
         data_cond.wait(lock, [this] {return !data_queue.empty(); });
         std::shared_ptr<T> res(std::make_shared<T>(std::move(data_queue.front())));
@@ -108,7 +108,7 @@ public:
         return res;
     }
     bool try_pop(T &value) {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(mut);
         if (data_queue.empty()) {
             return false;
@@ -118,7 +118,7 @@ public:
         return true;
     }
     std::shared_ptr<T> try_pop() {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(mut);
         if (data_queue.empty()) {
             return std::shared_ptr<T>();
@@ -128,7 +128,7 @@ public:
         return res;
     }
     bool empty() const {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(mut);
         return data_queue.empty();
     }

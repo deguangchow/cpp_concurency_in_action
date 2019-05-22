@@ -71,6 +71,10 @@ using std::function;
 using std::move;
 using std::forward;
 using std::result_of;
+using std::ref;
+using std::bind;
+using std::placeholders::_1;
+using std::placeholders::_2;
 
 using std::shared_ptr;
 using std::make_shared;

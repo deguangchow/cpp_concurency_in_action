@@ -22,45 +22,86 @@ void task2() {
     TICK();
     INFO("task2");
 }
+int sum(int a, int b) {
+    TICK();
+    INFO("sum(%d, %d)", a, b);
+    return a + b;
+}
 void test_simple_thread_pool() {
     TICK();
-    simple_thread_pool stp;
+    simple_thread_pool simpleThreadPool;
     for (int i = 1; i <= 2; ++i) {
-        stp.submit(task1);
+        simpleThreadPool.submit(task1);
     }
     for (int i = 1; i <= 2; ++i) {
-        stp.submit(task2);
+        simpleThreadPool.submit(task2);
     }
 
-    typedef function<void()> Func;
-    async(&simple_thread_pool::submit<Func>, &stp, task1);
-    async(&simple_thread_pool::submit<Func>, &stp, task2);
+    async(&simple_thread_pool::submit<TASK_TYPE>, &simpleThreadPool, task1);
+    async(&simple_thread_pool::submit<TASK_TYPE>, &simpleThreadPool, task2);
 
-    stp.submit([] {
+    simpleThreadPool.submit([] {
         TICK();
         INFO("task5");
     });
-    stp.submit([] {
+    simpleThreadPool.submit([] {
         TICK();
         INFO("task6");
     });
+
+    int a = 1, b = 2;
+    auto const& lambdaSum = [](int a, int b) {
+        TICK();
+        INFO("lambda_sum(%d, %d)", a, b);
+        return a + b;
+    };
+
+    simpleThreadPool.submit<TASK_TYPE>(bind(sum, a, b));
+    simpleThreadPool.submit<TASK_TYPE>(bind(lambdaSum, a, b));
+
+    async(&simple_thread_pool::submit<TASK_TYPE>, &simpleThreadPool, bind(sum, a, b));
+    async(&simple_thread_pool::submit<TASK_TYPE>, &simpleThreadPool, bind(lambdaSum, a, b));
 }
 
 //9.1.2 Waiting for tasks submitted to a thread pool
 //Listing 9.2 A thread pool with waitable tasks
-void thread_pool_test() {
+void test_thread_pool() {
     TICK();
-    thread_pool tp;
+    thread_pool threadPool;
     unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_submit(THREAD_NUMS);
+    vector<thread> vctThreads(THREAD_NUMS);
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        typedef function<void()> Func;
-        vct_submit[i] = thread(&thread_pool::submit<Func>, &tp, task1);
-        async(&thread_pool::submit<Func>, &tp, task2);
+        vctThreads[i] = thread(&thread_pool::submit<TASK_TYPE>, &threadPool, task1);
+        async(&thread_pool::submit<TASK_TYPE>, &threadPool, task2);
     }
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_submit[i].join();
+        vctThreads[i].join();
     }
+
+    async(&thread_pool::submit<TASK_TYPE>, &threadPool, [] {
+        TICK();
+        INFO("lambda.");
+    });
+
+    auto const& lambdaSum = [](int a, int b) {
+        TICK();
+        INFO("lambda_sum(%d, %d)", a, b);
+        return a + b;
+    };
+
+    int a = 1, b = 2;
+    auto fnRes1 = threadPool.submit(bind(sum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes1.get());
+
+    a = 3, b = 4;
+    auto fnRes2 = threadPool.submit(bind(lambdaSum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes2.get());
+
+    a = 5, b = 6;
+    async(&thread_pool::submit<TASK_TYPE>, &threadPool, bind(sum, a, b));
+
+    a = 7, b = 8;
+    async(&thread_pool::submit<TASK_TYPE>, &threadPool, bind(lambdaSum, a, b));
 }
 
 //Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
