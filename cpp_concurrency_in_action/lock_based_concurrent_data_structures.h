@@ -113,6 +113,7 @@ public:
         if (data_queue.empty()) {
             return false;
         }
+        INFO("pool task");
         value = std::move(data_queue.front());
         data_queue.pop();
         return true;

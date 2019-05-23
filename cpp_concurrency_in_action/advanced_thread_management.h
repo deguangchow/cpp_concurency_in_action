@@ -22,6 +22,7 @@ using TASK_TYPE = function<void()>;
 //Listing 9.1 Simple thread pool
 void task1();
 void task2();
+int sum(int a, int b);
 class simple_thread_pool {
     atomic_bool                                                         m_abDone;
     lock_based_conc_data::threadsafe_queue_shared_ptr<TASK_TYPE>        m_queueTasks;
@@ -159,16 +160,49 @@ public:
         }
     }
 };
-void test_thread_pool();
+
+template<typename ThreadPool>
+void test_thread_pool() {
+    TICK();
+    ThreadPool threadPool;
+    unsigned const& THREAD_NUMS = 5;
+    vector<thread> vctThreads(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vctThreads[i] = thread(&ThreadPool::submit<TASK_TYPE>, &threadPool, task1);
+        async(&ThreadPool::submit<TASK_TYPE>, &threadPool, task2);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vctThreads[i].join();
+    }
+
+    async(&ThreadPool::submit<TASK_TYPE>, &threadPool, [] {
+        TICK();
+        INFO("lambda.");
+    });
+
+    auto const& lambdaSum = [](int a, int b) {
+        TICK();
+        INFO("lambda_sum(%d, %d)", a, b);
+        return a + b;
+    };
+
+    int a = 1, b = 2;
+    auto fnRes1 = threadPool.submit(bind(sum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes1.get());
+
+    a = 3, b = 4;
+    auto fnRes2 = threadPool.submit(bind(lambdaSum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes2.get());
+
+    a = 5, b = 6;
+    async(&ThreadPool::submit<TASK_TYPE>, &threadPool, bind(sum, a, b));
+
+    a = 7, b = 8;
+    async(&ThreadPool::submit<TASK_TYPE>, &threadPool, bind(lambdaSum, a, b));
+}
 
 //Listing 9.3 parallel_accumulate using a thread pool with waitable tasks
-int task3(int a, int b);
-template<typename Iterator, typename T>
-T task4(Iterator first, Iterator last) {
-    TICK();
-    return accumulate(first, last, T());
-}
-template<typename Iterator, typename T>
+template<typename Iterator, typename T, typename ThreadPool>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
     unsigned long const DATA_LENGTH = distance(first, last);
@@ -179,7 +213,7 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     unsigned long const BLOCK_NUMS = (DATA_LENGTH + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     vector<future<T>>   vctFutures(BLOCK_NUMS - 1);
-    thread_pool         threadPool;
+    ThreadPool          threadPool;
     Iterator            posBlockStart = first;
     for (unsigned long i = 0; i < (BLOCK_NUMS - 1); ++i) {
         Iterator posBlockEnd = posBlockStart;
@@ -199,12 +233,20 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     result += last_result;
     return result;
 }
-void test_parallel_accumulate();
+
+template<typename ThreadPool>
+void test_parallel_accumulate() {
+    TICK();
+    unsigned nRes = parallel_accumulate<vector<unsigned>::const_iterator, unsigned, ThreadPool>
+        (VCT_NUMBERS.begin(), VCT_NUMBERS.end(), 0);
+
+    INFO("test_parallel_accumulate()=%d", nRes);
+}
 
 //Listing 9.5 A thread pool-based implementation of Quicksort
-template<typename T>
+template<typename T, typename ThreadPool>
 struct sorter {
-    thread_pool         threadPool;
+    ThreadPool          threadPool;
     list<T> do_sort(list<T>& chunk_data) {
         //TICK();
         if (chunk_data.empty()) {
@@ -235,16 +277,27 @@ struct sorter {
         return result;
     }
 };
-template<typename T>
+
+template<typename T, typename ThreadPool>
 list<T> parallel_quick_sort(list<T> input) {
     TICK();
     if (input.empty()) {
         return input;
     }
-    sorter<T> s;
+    sorter<T, ThreadPool> s;
     return s.do_sort(input);
 }
-void test_parallel_quick_sort();
+
+template<typename ThreadPool>
+void test_parallel_quick_sort() {
+    TICK();
+
+    list<unsigned> lstResult = adv_thread_mg::parallel_quick_sort<unsigned, ThreadPool>(LST_NUMBERS);
+    for (auto const &pos : lstResult) {
+        cout << pos << ", ";
+    }
+    cout << endl;
+}
 
 //Listing 9.6 A thread pool with thread-local work queue
 typedef std::queue<function_wrapper> LOCAL_QUEUE_TYPE;
@@ -316,83 +369,89 @@ public:
     }
 };
 
-void test_thread_pool_local_task();
 
 //Listing 9.7 Lock-based queue for work stealing
 class work_stealing_queue {
 private:
-    typedef function_wrapper data_type;
-    deque<data_type> the_queue;
-    mutable mutex the_mutex;
+    typedef function_wrapper DATA_TYPE;
+    deque<DATA_TYPE>                    m_dequeData;
+    mutable mutex                       m_mutex;
 
 public:
     work_stealing_queue() {}
     work_stealing_queue& operator=(const work_stealing_queue& other) = delete;
-    void push(data_type data) {
+    void push(DATA_TYPE data) {
         TICK();
-        lock_guard<mutex> lock(the_mutex);
-        the_queue.push_front(move(data));
+        lock_guard<mutex> lock(m_mutex);
+        m_dequeData.push_front(move(data));
     }
     bool empty() const {
         TICK();
-        lock_guard<mutex> lock(the_mutex);
-        return the_queue.empty();
+        lock_guard<mutex> lock(m_mutex);
+        return m_dequeData.empty();
     }
-    bool try_pop(data_type& res) {
+    bool try_pop(DATA_TYPE& res) {
         TICK();
-        lock_guard<mutex> lock(the_mutex);
-        if (the_queue.empty()) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_dequeData.empty()) {
             return false;
         }
-        res = move(the_queue.front());
-        the_queue.pop_front();
+
+        DEBUG("local task");
+        res = move(m_dequeData.front());
+        m_dequeData.pop_front();
         return true;
     }
-    bool try_steal(data_type& res) {
-        lock_guard<mutex> lock(the_mutex);
-        if (the_queue.empty()) {
+    bool try_steal(DATA_TYPE& res) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_dequeData.empty()) {
             return false;
         }
-        res = move(the_queue.back());
-        the_queue.pop_back();
+
+        WARN("steal task");
+        res = move(m_dequeData.back());
+        m_dequeData.pop_back();
         return true;
     }
 };
 
 //Listing 9.8 A thread pool that uses work stealing
 class thread_pool_steal {
-    typedef function_wrapper task_type;
+    typedef function_wrapper TASK_TYPE;
 
-    atomic<bool> done;
-    lock_based_conc_data::threadsafe_queue<task_type> pool_work_queue;
-    vector<unique_ptr<work_stealing_queue>> queues;
-    vector<thread> threads;
-    design_conc_code::join_threads joiner;
+    atomic<bool>                                        m_bDone_a;
+    lock_based_conc_data::threadsafe_queue<TASK_TYPE>   m_queuePoolTasks;
+    vector<unique_ptr<work_stealing_queue>>             m_vctStealingQueues;
+    vector<thread>                                      m_vctThreads;
+    design_conc_code::join_threads                      m_threadJoiner;
 
-    static thread_local work_stealing_queue* local_work_queue;
-    static thread_local unsigned my_index;
+    static thread_local work_stealing_queue*            m_pQueueLocalTasks_tl;
+    static thread_local unsigned                        m_uIndex_tl;
 
-    void worker_thread(unsigned my_index_) {
+    void run(unsigned my_index_) {
         TICK();
-        my_index = my_index_;
-        local_work_queue = queues[my_index].get();
-        while (!done) {
-            run_pending_task();
+
+        //common_fun::sleep(10);
+
+        m_uIndex_tl             = my_index_;
+        m_pQueueLocalTasks_tl   = m_vctStealingQueues[m_uIndex_tl].get();
+        while (!m_bDone_a) {
+            run_pending();
         }
     }
-    bool pop_task_from_local_queue(task_type& task) {
+    bool pop_task_from_local_queue(TASK_TYPE& task) {
         TICK();
-        return local_work_queue && local_work_queue->try_pop(task);
+        return m_pQueueLocalTasks_tl && m_pQueueLocalTasks_tl->try_pop(task);
     }
-    bool pop_task_from_pool_queue(task_type& task) {
+    bool pop_task_from_pool_queue(TASK_TYPE& task) {
         TICK();
-        return pool_work_queue.try_pop(task);
+        return m_queuePoolTasks.try_pop(task);
     }
-    bool pop_task_from_other_thread_queue(task_type& task) {
+    bool pop_task_from_other_thread_queue(TASK_TYPE& task) {
         TICK();
-        for (unsigned i = 0; i < queues.size(); ++i) {
-            unsigned const index = (my_index + i + 1) % queues.size();
-            if (queues[index]->try_steal(task)) {
+        for (unsigned i = 0; i < m_vctStealingQueues.size(); ++i) {
+            unsigned const index = (m_uIndex_tl + i + 1) % m_vctStealingQueues.size();
+            if (m_vctStealingQueues[index]->try_steal(task)) {
                 return true;
             }
         }
@@ -400,21 +459,21 @@ class thread_pool_steal {
     }
 
 public:
-    thread_pool_steal() : done(false), joiner(threads) {
+    thread_pool_steal() : m_bDone_a(false), m_threadJoiner(m_vctThreads) {
         TICK();
         unsigned const thread_count = thread::hardware_concurrency();
         try {
             for (unsigned i = 0; i < thread_count; ++i) {
-                queues.push_back(unique_ptr<work_stealing_queue>(new work_stealing_queue));
-                threads.push_back(thread(&thread_pool_steal::worker_thread, this, i));
+                m_vctStealingQueues.push_back(unique_ptr<work_stealing_queue>(new work_stealing_queue));
+                m_vctThreads.push_back(thread(&thread_pool_steal::run, this, i));
             }
         } catch (...) {
-            done = true;
+            m_bDone_a = true;
             throw;
         }
     }
     ~thread_pool_steal() {
-        done = true;
+        m_bDone_a = true;
     }
     template<typename FunctionType>
     future<typename result_of<FunctionType()>::type> submit(FunctionType f) {
@@ -423,25 +482,27 @@ public:
 
         packaged_task<result_type()> task(f);
         future<result_type> res(task.get_future());
-        if (local_work_queue) {
-            local_work_queue->push(move(task));
+        if (m_pQueueLocalTasks_tl) {
+            m_pQueueLocalTasks_tl->push(function_wrapper(move(task)));
         } else {
-            pool_work_queue.push(move(task));
+            m_queuePoolTasks.push(function_wrapper(move(task)));
         }
         return res;
     }
-    void run_pending_task() {
+    void run_pending() {
         TICK();
-        task_type task;
+        TASK_TYPE task;
         if (pop_task_from_local_queue(task) ||
             pop_task_from_pool_queue(task) ||
             pop_task_from_other_thread_queue(task)) {
             task();
         } else {
+            //WARN("run_pending, yield...");
             yield();
         }
     }
 };
+
 
 //9.2 Interrupting threads
 //9.2.1 Launching and interrupting another thread
