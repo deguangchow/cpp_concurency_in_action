@@ -247,57 +247,76 @@ list<T> parallel_quick_sort(list<T> input) {
 void test_parallel_quick_sort();
 
 //Listing 9.6 A thread pool with thread-local work queue
+typedef std::queue<function_wrapper> LOCAL_QUEUE_TYPE;
 class thread_pool_local {
-    lock_based_conc_data::threadsafe_queue<function_wrapper> pool_work_queue;
+    atomic_bool                                                 m_bDone_a;
+    vector<thread>                                              m_vctThreads;
+    lock_based_conc_data::threadsafe_queue<function_wrapper>    m_queuePoolTasks;
+    static thread_local unique_ptr<LOCAL_QUEUE_TYPE>            m_pQueuelocalTasks_tl;
+    design_conc_code::join_threads                              m_threadJoiner;
 
-    atomic_bool done;
-    typedef queue<function_wrapper> local_queue_type;
-    static thread_local unique_ptr<local_queue_type> local_work_queue;
-
-    void worker_thread() {
+    void run() {
         TICK();
-        local_work_queue.reset(new local_queue_type);
-        while (!done) {
-            run_pending_task();
+        m_pQueuelocalTasks_tl.reset(new LOCAL_QUEUE_TYPE());
+        while (!m_bDone_a) {
+            run_pending();
+
+            yield();
         }
     }
 
 public:
-    thread_pool_local() : done(false) {
+    thread_pool_local() : m_bDone_a(false), m_threadJoiner(m_vctThreads) {
         TICK();
+        auto const& THREAD_NUMS = thread::hardware_concurrency();
+        try {
+            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+                m_vctThreads.push_back(thread(&thread_pool_local::run, this));
+            }
+        } catch (...) {
+            m_bDone_a = true;
+            throw;
+        }
     }
     ~thread_pool_local() {
         TICK();
-        done = true;
+        m_bDone_a = true;
     }
-    template<typename FunctionType>
-    future<typename result_of<FunctionType()>::type> submit(FunctionType f) {
+    template<typename F, typename...Args>
+    future<typename result_of<F(Args...)>::type> submit(F&& f, Args&&...args) {
         TICK();
-        typedef typename result_of<FunctionType()>::type result_type;
+        typedef typename result_of<F(Args...)>::type result_type;
 
-        packaged_task<result_type()> task(f);
+        packaged_task<result_type(Args...)> task(move(f));
         future<result_type> res(task.get_future());
-        if (local_work_queue) {
-            local_work_queue->push(move(task));
+        if (m_pQueuelocalTasks_tl) {
+            //if the class member variable 'm_pQueuelocalTasks_tl' has been initialized to 'nullptr', never run to here.
+            m_pQueuelocalTasks_tl->push(function_wrapper(move(task)));
         } else {
-            pool_work_queue.push(move(task));
+            //if the class member variable 'm_pQueuelocalTasks_tl' has been initialized to object, never run to here.
+            m_queuePoolTasks.push(function_wrapper(move(task)));
         }
         return res;
     }
-    void run_pending_task() {
+    void run_pending() {
         TICK();
         function_wrapper task;
-        if (local_work_queue && !local_work_queue->empty()) {
-            task = move(local_work_queue->front());
-            local_work_queue->pop();
+        if (m_pQueuelocalTasks_tl && !m_pQueuelocalTasks_tl->empty()) {
+            task = move(m_pQueuelocalTasks_tl->front());
+            m_pQueuelocalTasks_tl->pop();
+            DEBUG("local task");
             task();
-        } else if (pool_work_queue.try_pop(task)) {
+        } else if (m_queuePoolTasks.try_pop(task)) {
+            DEBUG("pool task");
             task();
         } else {
+            WARN("run_pending, yield...");
             yield();
         }
     }
 };
+
+void test_thread_pool_local_task();
 
 //Listing 9.7 Lock-based queue for work stealing
 class work_stealing_queue {

@@ -233,6 +233,47 @@ void test_parallel_quick_sort() {
     cout << endl;
 }
 
+thread_local unique_ptr<LOCAL_QUEUE_TYPE> thread_pool_local::m_pQueuelocalTasks_tl = nullptr;
+
+void test_thread_pool_local_task() {
+    TICK();
+    thread_pool_local threadPoolLocal;
+    unsigned const& THREAD_NUMS = 5;
+    vector<thread> vctThreads(THREAD_NUMS);
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vctThreads[i] = thread(&thread_pool_local::submit<TASK_TYPE>, &threadPoolLocal, task1);
+        async(&thread_pool_local::submit<TASK_TYPE>, &threadPoolLocal, task2);
+    }
+    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+        vctThreads[i].join();
+    }
+
+    async(&thread_pool_local::submit<TASK_TYPE>, &threadPoolLocal, [] {
+        TICK();
+        INFO("lambda.");
+    });
+
+    auto const& lambdaSum = [](int a, int b) {
+        TICK();
+        INFO("lambda_sum(%d, %d)", a, b);
+        return a + b;
+    };
+
+    int a = 1, b = 2;
+    auto fnRes1 = threadPoolLocal.submit(bind(sum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes1.get());
+
+    a = 3, b = 4;
+    auto fnRes2 = threadPoolLocal.submit(bind(lambdaSum, a, b));
+    INFO("sum(%d, %d)=%d", a, b, fnRes2.get());
+
+    a = 5, b = 6;
+    async(&thread_pool_local::submit<TASK_TYPE>, &threadPoolLocal, bind(sum, a, b));
+
+    a = 7, b = 8;
+    async(&thread_pool_local::submit<TASK_TYPE>, &threadPoolLocal, bind(lambdaSum, a, b));
+}
+
 //9.2 Interrupting threads
 //9.2.1 Launching and interrupting another thread
 //Listing 9.9 Basic implementation of interruptible_thread
