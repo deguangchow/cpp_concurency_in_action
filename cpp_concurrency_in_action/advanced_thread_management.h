@@ -508,14 +508,14 @@ public:
 //9.2.1 Launching and interrupting another thread
 //Listing 9.9 Basic implementation of interruptible_thread
 class interrupt_flag {
-    atomic<bool> flag = false;
+    atomic<bool>        m_bFlag_a = false;
 public:
     void set();
     bool is_set() const;
 };
 class interruptible_thread {
-    thread internal_thread;
-    interrupt_flag* flag;
+    thread              m_threadInternal;
+    interrupt_flag*     m_pFlag;
 public:
     template<typename FunctionType>
     explicit interruptible_thread(FunctionType f);
@@ -526,16 +526,15 @@ public:
 };
 
 //9.2.2 Detecting that a thread has been interrupted
-void interruption_point();
-void interruptible_thread_test();
+void test_interruptible_thread();
 
 //9.2.3 Interrupting a condition variable wait
 //Listing 9.10 A broken version of interruptible_wait for condition_variable
 //Listing 9.11 Using a timeout in interruptible_wait for condition_variable
 class interrupt_flag_cv {
-    atomic<bool> flag;
-    condition_variable* thread_cond;
-    mutex set_clear_mutex;
+    atomic<bool>            m_bFlag_a;
+    condition_variable*     m_pcvThread;
+    mutex                   m_mutexSetClear;
 public:
     interrupt_flag_cv();
     void set();
@@ -546,7 +545,6 @@ public:
         ~clear_cv_on_destruct();
     };
 };
-void interruption_point_cv();
 void interruptible_wait(condition_variable& cv, unique_lock<mutex>& lk);
 template<typename Predicate>
 void interruptible_wait(condition_variable& cv, unique_lock<mutex>& lk, Predicate pred);
@@ -554,10 +552,10 @@ void interruptible_wait(condition_variable& cv, unique_lock<mutex>& lk, Predicat
 //9.2.4 Interrupting a wait on condition_variable_any
 //Listing 9.12 interruptible_wait for condition_variable_any
 class interrupt_flag_cva {
-    atomic<bool> flag;
-    condition_variable* thread_cond;
-    condition_variable_any* thread_cond_any;
-    mutex set_clear_mutex;
+    atomic<bool>                m_bFlag_a;
+    condition_variable*         m_pcvThread;
+    condition_variable_any*     m_pcvaThread;
+    mutex                       m_mutexSetClear;
 public:
     interrupt_flag_cva();
     void set();
@@ -581,7 +579,7 @@ void interruptible_wait(future<T>& uf);
 //Listing 9.13 Monitoring the filesystem in the background
 void background_thread(int disk_id);
 void start_background_processing();
-void monitor_filesystem();
+void test_monitor_filesystem();
 
 }//namespace adv_thread_mg
 

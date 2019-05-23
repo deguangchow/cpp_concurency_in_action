@@ -158,6 +158,9 @@ int main() {
     adv_thread_mg::test_thread_pool<adv_thread_mg::thread_pool_steal>();
     adv_thread_mg::test_parallel_accumulate<adv_thread_mg::thread_pool_steal>();
     adv_thread_mg::test_parallel_quick_sort<adv_thread_mg::thread_pool_steal>();
+
+    adv_thread_mg::test_interruptible_thread();
+    adv_thread_mg::test_monitor_filesystem();
 #endif
 
 #if 0//chapter10
