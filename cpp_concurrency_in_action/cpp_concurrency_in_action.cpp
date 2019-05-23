@@ -148,9 +148,9 @@ int main() {
     adv_thread_mg::test_simple_thread_pool();
     adv_thread_mg::test_thread_pool();
     adv_thread_mg::test_parallel_accumulate();
-    adv_thread_mg::parallel_quick_sort_test();
+    adv_thread_mg::test_parallel_quick_sort();
 #endif
-    adv_thread_mg::test_parallel_accumulate();
+    adv_thread_mg::test_parallel_quick_sort();
 
 #if 0//chapter10
     test_debug_mulitithread::test_concurrent_push_and_pop_on_empty_queue();

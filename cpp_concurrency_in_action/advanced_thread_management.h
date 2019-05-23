@@ -109,7 +109,7 @@ class thread_pool {
         while (!m_abDone) {
             function_wrapper task;
             if (m_queueTasks.try_pop(task)) {
-                DEBUG("task()");
+                DEBUG("run");
                 task();
             } else {
                 yield();
@@ -148,10 +148,11 @@ public:
 
     //9.1.3 Tasks that wait for other tasks
     //Listing 9.4 An implementation of run_pending_task()
-    void running_pending_task() {
+    void run_pending() {
         TICK();
         function_wrapper task;
         if (m_queueTasks.try_pop(task)) {
+            DEBUG("run_pending");
             task();
         } else {
             yield();
@@ -203,29 +204,34 @@ void test_parallel_accumulate();
 //Listing 9.5 A thread pool-based implementation of Quicksort
 template<typename T>
 struct sorter {
-    thread_pool pool;
+    thread_pool         threadPool;
     list<T> do_sort(list<T>& chunk_data) {
+        //TICK();
         if (chunk_data.empty()) {
             return chunk_data;
         }
-        list<T> result;
+        list<T>         result;
         result.splice(result.begin(), chunk_data, chunk_data.begin());
-        T const& partition_val = *result.begin();
-        typename list<T>::iterator divide_point = partition(chunk_data.begin(), chunk_data.end(),
-            [&](T const& val) {return val < partition_val; });
+        T const&        tPartitionValue = *result.begin();
+        auto            posDivide = partition(chunk_data.begin(), chunk_data.end(),
+            [&](T const& val) {
+            return val < tPartitionValue;
+        });
 
-        list<T> new_lower_chunk;
-        new_lower_chunk.splice(new_lower_chunk.end(), chunk_data, chunk_data.begin(), divide_point);
-        future<list<T>> new_lower =
-            pool.submit(bind(&sorter::do_sort, this, move(new_lower_chunk)));
+        list<T>         lstNewLowerChunk;
+        lstNewLowerChunk.splice(lstNewLowerChunk.end(), chunk_data, chunk_data.begin(), posDivide);
 
-        list<T> new_higher(do_sort(chunk_data));
-        result.splice(result.end(), new_higher);
+        future<list<T>> lstLower_f =
+            threadPool.submit(bind(&sorter::do_sort, this, move(lstNewLowerChunk)));
 
-        while (new_lower.wait_for(seconds(0)) != future_status::timeout) {
-            pool.running_pending_task();
+        list<T>         lstNewHigherChunk(do_sort(chunk_data));
+        result.splice(result.end(), lstNewHigherChunk);
+
+        while (lstLower_f.wait_for(seconds(0)) == future_status::timeout) {
+            WARN("sorter<T>::do_sort() loop...");
+            threadPool.run_pending();
         }
-        result.splice(result.begin(), new_lower.get());
+        result.splice(result.begin(), lstLower_f.get());
         return result;
     }
 };
@@ -238,7 +244,7 @@ list<T> parallel_quick_sort(list<T> input) {
     sorter<T> s;
     return s.do_sort(input);
 }
-void parallel_quick_sort_test();
+void test_parallel_quick_sort();
 
 //Listing 9.6 A thread pool with thread-local work queue
 class thread_pool_local {

@@ -564,7 +564,7 @@ public:
 
     explicit threadsafe_lookup_table(unsigned num_buckets = 19, Hash const& hasher_ = Hash()) :
         buckets(num_buckets), hasher(hasher_) {
-        TICK();
+        //TICK();
         for (unsigned i = 0; i < num_buckets; ++i) {
             buckets[i].reset(new bucket_type);
         }
@@ -630,7 +630,7 @@ class threadsafe_list {
 public:
     threadsafe_list() {}
     ~threadsafe_list() {
-        TICK();
+        //TICK();
         remove_if([](T const &) {return true; });
     }
     threadsafe_list(threadsafe_list const& other) = delete;
@@ -674,7 +674,7 @@ public:
     }
     template<typename Predicate>
     void remove_if(Predicate p) {
-        TICK();
+        //TICK();
         node* current = &head;
         std::unique_lock<std::mutex> lk(head.m);
         while (node* const next = current->next.get()) {
