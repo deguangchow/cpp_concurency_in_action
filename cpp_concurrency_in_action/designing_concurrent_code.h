@@ -149,7 +149,7 @@ void processing_loop_protect_test();
 template<typename Iterator, typename T>
 struct accumulate_block {
     T operator()(Iterator first, Iterator last) {
-        TICK();
+        //TICK();
         return std::accumulate(first, last, T());
     }
 };

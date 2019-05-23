@@ -73,24 +73,25 @@ class function_wrapper {
         virtual ~impl_base() {}
     };
     unique_ptr<impl_base> impl;
-    template<typename F>
+    template<typename F, typename...Args>
     struct impl_type : impl_base {
         F f;
         explicit impl_type(F&& f_) : f(move(f_)) {}
-        void call() {
-            TICK();
-            f();
+        void call(Args&&...args) {
+            //TICK();
+            f(args...);
         }
     };
 
 public:
     template<typename F>
     explicit function_wrapper(F&& f) : impl(new impl_type<F>(move(f))) {}
-    void operator()() { impl->call(); }
+    template<typename...Args>
+    void operator()(Args&&...args) { impl->call(args...); }
     function_wrapper() = default;
     function_wrapper(function_wrapper&& other) : impl(move(other.impl)) {}
     function_wrapper& operator=(function_wrapper&& other) {
-        TICK();
+        //TICK();
         impl = move(other.impl);
         return *this;
     }
@@ -108,6 +109,7 @@ class thread_pool {
         while (!m_abDone) {
             function_wrapper task;
             if (m_queueTasks.try_pop(task)) {
+                DEBUG("task()");
                 task();
             } else {
                 yield();
@@ -142,6 +144,8 @@ public:
         m_queueTasks.push(function_wrapper(move(task)));
         return res;
     }
+
+
     //9.1.3 Tasks that wait for other tasks
     //Listing 9.4 An implementation of run_pending_task()
     void running_pending_task() {
@@ -166,37 +170,35 @@ T task4(Iterator first, Iterator last) {
 template<typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
-    unsigned long const length = distance(first, last);
-    if (!length) {
+    unsigned long const DATA_LENGTH = distance(first, last);
+    if (!DATA_LENGTH) {
         return init;
     }
-    unsigned long const block_size = 25;
-    unsigned long const num_blocks = (length + block_size - 1) / block_size;
+    unsigned long const BLOCK_SIZE = 25;
+    unsigned long const BLOCK_NUMS = (DATA_LENGTH + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    vector<future<T>> futures(num_blocks - 1);
-    thread_pool pool;
-    Iterator block_start = first;
-    for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
-        Iterator block_end = block_start;
-        advance(block_end, block_size);
-#if 0//exist compile error
-        typedef function<int(int, int)> Func;
-        futures[i] = pool.submit<Func>(design_conc_code::accumulate_block<Iterator, T>());
-#else//only 'void()' can be compiled correctly
-        typedef function<void()> Func;
-        pool.submit<Func>(&task2);
-#endif
-        block_start = block_end;
+    vector<future<T>>   vctFutures(BLOCK_NUMS - 1);
+    thread_pool         threadPool;
+    Iterator            posBlockStart = first;
+    for (unsigned long i = 0; i < (BLOCK_NUMS - 1); ++i) {
+        Iterator posBlockEnd = posBlockStart;
+        advance(posBlockEnd, BLOCK_SIZE);
+
+        //submit tasks to the thread pool, and return the result of the task to the future variables.
+        vctFutures[i] = threadPool.submit(
+            bind(design_conc_code::accumulate_block<Iterator, T>(), posBlockStart, posBlockEnd));
+
+        posBlockStart = posBlockEnd;
     }
-    T last_result = design_conc_code::accumulate_block<Iterator, T>()(block_start, last);
+    T last_result = design_conc_code::accumulate_block<Iterator, T>()(posBlockStart, last);
     T result = init;
-    for (unsigned long i = 0; i < (num_blocks - 1); ++i) {
-        result += futures[i].get();
+    for (unsigned long i = 0; i < (BLOCK_NUMS - 1); ++i) {
+        result += vctFutures[i].get();
     }
     result += last_result;
     return result;
 }
-void parallel_accumulate_test();
+void test_parallel_accumulate();
 
 //Listing 9.5 A thread pool-based implementation of Quicksort
 template<typename T>

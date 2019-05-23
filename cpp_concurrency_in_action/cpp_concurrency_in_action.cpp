@@ -147,10 +147,10 @@ int main() {
 #if 0//chapter9
     adv_thread_mg::test_simple_thread_pool();
     adv_thread_mg::test_thread_pool();
-    adv_thread_mg::parallel_accumulate_test();
+    adv_thread_mg::test_parallel_accumulate();
     adv_thread_mg::parallel_quick_sort_test();
 #endif
-    adv_thread_mg::test_simple_thread_pool();
+    adv_thread_mg::test_parallel_accumulate();
 
 #if 0//chapter10
     test_debug_mulitithread::test_concurrent_push_and_pop_on_empty_queue();
