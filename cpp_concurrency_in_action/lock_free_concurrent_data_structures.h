@@ -14,25 +14,25 @@ namespace lock_free_conc_data {
 
 //7.1 Definitions and consequences
 //7.1.1 Types of nonblocking data structures
-//Listing 7.1 Implementation of a spin-lock mutex using std::atmoic_flag
+//Listing 7.1 Implementation of a spin-lock mutex using atmoic_flag
 class spinlock_mutex {
-    std::atomic_flag flag = ATOMIC_FLAG_INIT;
+    atomic_flag flag_a = ATOMIC_FLAG_INIT;
 public:
     spinlock_mutex() {}
     void lock() {
         TICK();
         //atomically set the flag to true and return previous value
-        while (flag.test_and_set(std::memory_order_acquire)) {
-            WARN("lock loop");
+        while (flag_a.test_and_set(memory_order::memory_order_acquire)) {
+            WARN("lock loop...");
+            yield();
         }
     }
     void unlock() {
         TICK();
-        flag.clear(std::memory_order_release);
+        flag_a.clear(memory_order::memory_order_release);
     }
 };
-void spinlock_mutex_plus();
-void spinlock_mutex_test();
+void test_spinlock_mutex();
 
 //7.1.2 Lock-free data structures
 //7.1.3 Wait-free data sturctures
@@ -49,63 +49,70 @@ private:
         node* next;
         explicit node(T const& data_) : data(data_), next(nullptr) {}
     };
-    std::atomic<node*> head;
+    atomic<node*>   m_pHead_a = nullptr;
 
 public:
     void push(T const& data) {
         TICK();
-        node* const new_node = new node(data);
-        new_node->next = head.load();
+        node* const pNewNode = new node(data);
+        pNewNode->next = m_pHead_a.load();
+
         //compare and change value store in head with arg1, arg2
-        while (!head.compare_exchange_weak(new_node->next, new_node)) {
-            WARN("push loop");
+        //bool ret = addr.compare_exchange_weak(old_value, new_value)
+        //if ret == true, *addr = new_value;
+        //if ret == false, old_vale = *addr;
+        while (!m_pHead_a.compare_exchange_weak(pNewNode->next, pNewNode)) {
+            WARN("push() loop...");
+            yield();
         }
-        INFO("push(%d)", data);
+        DEBUG("push(%d)", data);
     }
     void pop(T& result) {
         TICK();
-        node* old_head = head.load();
-        while (!head.compare_exchange_weak(old_head, old_head->next)) {
-            WARN("pop loop");
+        node* pOldHead = m_pHead_a.load();
+        while (pOldHead && !m_pHead_a.compare_exchange_weak(pOldHead, pOldHead->next)) {
+            WARN("pop() loop...");
+            yield();
         }
-        result = old_head->data;
+        result = pOldHead ? pOldHead->data : 0;
         INFO("pop()=%d", result);
     }
 };
-void lock_free_stack_test();
+void test_lock_free_stack();
 
 //Listing 7.3 A lock-free stack that leaks nodes
 template<typename T>
 class lock_free_shared_ptr_stack {
 private:
     struct node {
-        std::shared_ptr<T> data;//Data is now held by pointer
+        shared_ptr<T> data;//Data is now held by pointer
         node* next = nullptr;
-        //Create std::shared_ptr for newly allocated T
-        explicit node(T const& data_) : data(std::make_shared<T>(data_)) {}
+        //Create shared_ptr for newly allocated T
+        explicit node(T const& data_) : data(make_shared<T>(data_)) {}
     };
-    std::atomic<node*> head;
+    atomic<node*> m_pHead_a = nullptr;
 
 public:
     void push(T const& data) {
         TICK();
-        node* const new_node = new node(data);
-        new_node->next = head.load();
-        while (!head.compare_exchange_weak(new_node->next, new_node)) {
-            WARN("push loop");
+        node* const pNewNode = new node(data);
+        pNewNode->next = m_pHead_a.load();
+        while (!m_pHead_a.compare_exchange_weak(pNewNode->next, pNewNode)) {
+            WARN("push() loop...");
+            yield();
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        node* old_head = head.load();
+        node* pOldHead = m_pHead_a.load();
         //Check old_head is not a null pointer before you dereference it
-        while (old_head && !head.compare_exchange_weak(old_head, old_head->next)) {
-            WARN("push loop");
+        while (pOldHead && !m_pHead_a.compare_exchange_weak(pOldHead, pOldHead->next)) {
+            WARN("pop() loop...");
         }
-        return old_head ? old_head->data : std::make_shared<T>();
+        return pOldHead ? pOldHead->data : make_shared<T>(0);
     }
 };
-void lock_free_shared_ptr_stack_test();
+void test_lock_free_shared_ptr_stack();
 
 //7.2.2 Stopping those pesky leaks: managing memory in lock-free data structures
 //Listing 7.4 Reclaiming nodes when no threads are in pop()
@@ -113,17 +120,19 @@ template<typename T>
 class lock_free_reclaim_stack {
 private:
     struct node {
-        std::shared_ptr<T> data;
+        shared_ptr<T> data;
         node* next = nullptr;
-        explicit node(T const& data_) : data(std::make_shared<T>(data_)) {}
+        explicit node(T const& data_) : data(make_shared<T>(data_)) {}
     };
-    std::atomic<node*> head;
-    std::atomic<node*> to_be_deleted;
-    std::atomic<unsigned> threads_in_pop;//Atomic variable
+    atomic<node*>       m_pHead_a = nullptr;
+    atomic<node*>       m_pToBeDeleted_a = nullptr;
+    atomic<unsigned>    m_uThreadsInPop_a = 0;//Atomic variable
     static void delete_nodes(node* nodes) {
         TICK();
         while (nodes) {
             node* next = nodes->next;
+
+            WARN("delete node(%d)", *nodes->data.get());
             delete nodes;
             nodes = next;
         }
@@ -138,10 +147,11 @@ private:
     }
     void chain_pending_nodes(node* first, node* last) {
         TICK();
-        last->next = to_be_deleted;
+        last->next = m_pToBeDeleted_a;
         //Loop to guarantee that last->next is correct
-        while (!to_be_deleted.compare_exchange_weak(last->next, first)) {
-            WARN("to_be_deleted loop");
+        while (!m_pToBeDeleted_a.compare_exchange_weak(last->next, first)) {
+            WARN("chain_pending_nodes() loop...");
+            yield();
         }
     }
     void clain_pending_node(node* n) {
@@ -150,13 +160,15 @@ private:
     }
     void try_reclaim(node* old_head) {
         TICK();
-        if (threads_in_pop == 1) {
-            node* nodes_to_delete = to_be_deleted.exchange(nullptr);
-            if (!--threads_in_pop) {
-                delete_nodes(nodes_to_delete);
-            } else if (nodes_to_delete) {
-                chain_pending_nodes(nodes_to_delete);
+        if (m_uThreadsInPop_a == 1) {
+            node* pToBeDeleted = m_pToBeDeleted_a.exchange(nullptr);
+            if (!--m_uThreadsInPop_a) {
+                delete_nodes(pToBeDeleted);
+            } else if (pToBeDeleted) {
+                chain_pending_nodes(pToBeDeleted);
             }
+
+            WARN("try reclaim(%d)", *old_head->data.get());
             delete old_head;
         }
     }
@@ -164,28 +176,30 @@ private:
 public:
     void push(T const& data) {
         TICK();
-        node* const new_node = new node(data);
-        new_node->next = head.load();
-        while (!head.compare_exchange_weak(new_node->next, new_node)) {
-            WARN("push loop");
+        node* const pNewNode = new node(data);
+        pNewNode->next = m_pHead_a.load();
+        while (!m_pHead_a.compare_exchange_weak(pNewNode->next, pNewNode)) {
+            WARN("push() loop...");
+            yield();
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        ++threads_in_pop;//Increase counter before doing anything else
-        node* old_head = head.load();
-        while (old_head && !head.compare_exchange_weak(old_head, old_head->next)) {
-            WARN("pop loop");
+        ++m_uThreadsInPop_a;//Increase counter before doing anything else
+        node* pOldNode = m_pHead_a.load();
+        while (pOldNode && !m_pHead_a.compare_exchange_weak(pOldNode, pOldNode->next)) {
+            WARN("pop() loop...");
+            yield();
         }
-        std::shared_ptr<T> res(std::make_shared<T>());
-        if (old_head) {
-            res.swap(old_head->data);//Reclaim deleted nodes if you can
+        shared_ptr<T> result(make_shared<T>());
+        if (pOldNode) {
+            result.swap(pOldNode->data);//Reclaim deleted nodes if you can
         }
-        try_reclaim(old_head);//Extract data from node rather than copying pointer
-        return res;
+        try_reclaim(pOldNode);//Extract data from node rather than copying pointer
+        return result;
     }
 };
-void lock_free_reclaim_stack_test();
+void test_lock_free_reclaim_stack();
 
 //7.2.3 Detecting nodes that can`t be reclaimed using hazard pointers
 //Listing 7.6 An implementation of pop() using hazard pointers
@@ -193,36 +207,38 @@ void lock_free_reclaim_stack_test();
 //Listing 7.8 A simple implementation of the reclaim functions
 
 //7.2.4 Detecting nodes in use with reference counting
-//Listing 7.9 A lock-free stack using a lock-free std::shared_ptr<> implementation
+//Listing 7.9 A lock-free stack using a lock-free shared_ptr<> implementation
 template<typename T>
 class lock_free_shared_stack {
 private:
     struct node {
-        std::shared_ptr<T> data;
-        std::shared_ptr<node> next;
-        explicit node(T const& data_) : data(std::make_shared<T>(data_)), next(nullptr) {}
+        shared_ptr<T> data;
+        shared_ptr<node> next;
+        explicit node(T const& data_) : data(make_shared<T>(data_)), next(nullptr) {}
     };
-    std::shared_ptr<node> head;
+    shared_ptr<node>    m_ptrHead = nullptr;
 
 public:
     void push(T const& data) {
         TICK();
-        std::shared_ptr<node> const new_node = std::make_shared<node>(data);
-        new_node->next = std::atomic_load(&head);
-        while (!std::atomic_compare_exchange_weak(&head, &new_node->next, new_node)) {
-            WARN("push loop");
+        shared_ptr<node> const ptrNewNode = make_shared<node>(data);
+        ptrNewNode->next = atomic_load(&m_ptrHead);
+        while (!atomic_compare_exchange_weak(&m_ptrHead, &ptrNewNode->next, ptrNewNode)) {
+            WARN("push() loop...");
+            yield();
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        std::shared_ptr<node> old_head = std::atomic_load(&head);
-        while (old_head && !std::atomic_compare_exchange_weak(&head, &old_head, old_head->next)) {
-            WARN("pop loop");
+        shared_ptr<node> ptrOldHead = atomic_load(&m_ptrHead);
+        while (ptrOldHead && !atomic_compare_exchange_weak(&m_ptrHead, &ptrOldHead, ptrOldHead->next)) {
+            WARN("pop() loop...");
+            yield();
         }
-        return old_head ? old_head->data : std::make_shared<T>();
+        return ptrOldHead ? ptrOldHead->data : make_shared<T>();
     }
 };
-void lock_free_shared_stack_test();
+void test_lock_free_shared_stack();
 
 //Listing 7.10 Pushing a node on a lock-free stack using split reference counts
 //Listing 7.11 Popping a node form a lock-free stack using split reference counts
@@ -231,20 +247,20 @@ class lock_free_split_ref_cnt_stack {
 private:
     struct node;
     struct counted_node_ptr {
-        int external_count;
-        node* ptr;
+        int                 external_count;
+        node*               ptr;
         counted_node_ptr() : external_count(0), ptr(nullptr) {}
     };
     struct node {
-        std::shared_ptr<T> data;
-        std::atomic<int> internal_count;
-        counted_node_ptr* next;
-        explicit node(T const& data_) : data(std::make_shared<T>(data_)), internal_count(0), next(nullptr) {}
+        shared_ptr<T>       data;
+        atomic<int>         internal_count;
+        counted_node_ptr*   next;
+        explicit node(T const& data_) : data(make_shared<T>(data_)), internal_count(0), next(nullptr) {}
     };
 #if 1
-    std::atomic<counted_node_ptr*> head;
-#else//undefining '_ENABLE_ATOMIC_ALIGNMENT_FIX', the 'std::<Type>' can`t be compiled correctly.
-    std::atomic<counted_node_ptr> head;
+    atomic<counted_node_ptr*>   m_pHead_a = nullptr;
+#else//undefining '_ENABLE_ATOMIC_ALIGNMENT_FIX', the '<Type>' can`t be compiled correctly.
+    atomic<counted_node_ptr>    m_pHead_a;
     void increase_head_count(counted_node_ptr& old_counter) {
         TICK();
         counted_node_ptr new_counter;
@@ -252,7 +268,7 @@ private:
             WARN("increase_head_count() loop");
             new_counter = old_counter;
             ++(new_counter.external_count);
-        } while (!head.compare_exchange_strong(old_counter, new_counter));
+        } while (!m_pHead_a.compare_exchange_strong(old_counter, new_counter));
         (old_counter).external_count = new_counter.external_count;
     }
 #endif
@@ -260,8 +276,10 @@ private:
 public:
     ~lock_free_split_ref_cnt_stack() {
         TICK();
-        while (pop()) {
-            WARN("~lock_free_split_ref_cnt_stack() loop");
+        while (auto const ptr = pop()) {
+            WARN("~lock_free_split_ref_cnt_stack() loop...");
+            INFO("pop()=%d", *ptr.get());
+            yield();
         }
     }
     void push(T const& data) {
@@ -269,37 +287,39 @@ public:
         counted_node_ptr* new_node = new counted_node_ptr();
         new_node->ptr = new node(data);
         new_node->external_count = 1;
-        new_node->ptr->next = head.load();
-        while (!head.compare_exchange_weak(new_node->ptr->next, new_node)) {
-            WARN("push() loop");
+        new_node->ptr->next = m_pHead_a.load();
+        while (!m_pHead_a.compare_exchange_weak(new_node->ptr->next, new_node)) {
+            WARN("push() loop...");
+            yield();
         }
     }
 #if 1
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr* old_head = head.load();
-        while (old_head && !head.compare_exchange_weak(old_head, old_head->ptr->next)) {
-            WARN("pop() loop");
+        counted_node_ptr* pOldHead = m_pHead_a.load();
+        while (pOldHead && !m_pHead_a.compare_exchange_weak(pOldHead, pOldHead->ptr->next)) {
+            WARN("pop() loop...");
+            yield();
         }
-        return old_head ? old_head->ptr->data : nullptr;
+        return pOldHead ? pOldHead->ptr->data : nullptr;
     }
 #else
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr old_head = head.load();
+        counted_node_ptr pOldHead = m_pHead_a.load();
         for (;;) {
             WARN("pop() loop");
-            increase_head_count(old_head);
-            node* const ptr = old_head.ptr;
+            increase_head_count(pOldHead);
+            node* const ptr = pOldHead.ptr;
             if (!ptr) {
                 WARN("ptr(nullptr)");
-                return std::shared_ptr<T>();
+                return shared_ptr<T>();
             }
-            if (!head.compare_exchange_strong(old_head, ptr->next)) {
-                std::shared_ptr<T> res;
+            if (!m_pHead_a.compare_exchange_strong(pOldHead, ptr->next)) {
+                shared_ptr<T> res;
                 res.swap(ptr->data);
 
-                int const count_increase = old_head.external_count - 2;
+                int const count_increase = pOldHead.external_count - 2;
                 if (ptr->internal_count.fetch_add(count_increase) == -count_increase) {
                     delete ptr;
                 }
@@ -311,7 +331,7 @@ public:
     }
 #endif
 };
-void lock_free_split_ref_cnt_stack_test();
+void test_lock_free_split_ref_cnt_stack();
 
 //7.2.5 Appling the memory model to the lock-free stack
 //Listing 7.12 A lock-free stack with reference counting and relaxed atomic operations
@@ -324,15 +344,15 @@ private:
         node* ptr;
     };
     struct node {
-        std::shared_ptr<T> data;
-        std::atomic<int> intrenal_count;
+        shared_ptr<T> data;
+        atomic<int> intrenal_count;
         counted_node_ptr* next;
-        explicit node(T const& data_) : data(std::make_shared<T>(data_)), intrenal_count(0), next(nullptr) {}
+        explicit node(T const& data_) : data(make_shared<T>(data_)), intrenal_count(0), next(nullptr) {}
     };
 #if 1
-    std::atomic<counted_node_ptr*> head;
+    atomic<counted_node_ptr*> head;
 #else
-    std::atomic<counted_node_ptr> head;
+    atomic<counted_node_ptr> head;
     void increase_head_count(counted_node_ptr& old_counter) {
         TICK();
         counted_node_ptr new_counter;
@@ -341,7 +361,7 @@ private:
             new_counter = old_counter;
             ++new_counter.external_count;
         } while (!head.compare_exchange_strong(old_counter, new_counter,
-            std::memory_order_acquire, memory_order_relaxed));
+            memory_order_acquire, memory_order_relaxed));
         old_counter.external_count = new_counter.external_count;
     }
 #endif
@@ -360,13 +380,13 @@ public:
         counted_node_ptr* new_node = new counted_node_ptr();
         new_node->ptr = new node(data);
         new_node->external_count = 1;
-        new_node->ptr->next = head.load(std::memory_order_relaxed);
+        new_node->ptr->next = head.load(memory_order::memory_order_relaxed);
         while (!head.compare_exchange_weak(new_node->ptr->next, new_node,
-            std::memory_order_release, std::memory_order_relaxed)) {
+            memory_order::memory_order_release, memory_order::memory_order_relaxed)) {
             WARN("push() loop");
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
         counted_node_ptr* old_head = head.load();
         while (old_head && !head.compare_exchange_weak(old_head, old_head->ptr->next)) {
@@ -380,33 +400,33 @@ public:
         counted_node_ptr new_node;
         new_node.ptr = new node(data);
         new_node.external_count = 1;
-        new_node.ptr->next = head.load(std::memory_order_relaxed);
+        new_node.ptr->next = head.load(memory_order_relaxed);
         while (!head.compare_exchange_weak(new_node.ptr->next, &new_node,
-            std::memory_order_release, std::memory_order_relaxed)) {
+            memory_order_release, memory_order_relaxed)) {
             WARN("push() loop");
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr old_head = head.load(std::memory_order_acq_rel);
+        counted_node_ptr old_head = head.load(memory_order_acq_rel);
         for (;;) {
             WARN("pop() loop");
             increase_head_count(old_head);
             node* const ptr = old_head.ptr;
             if (!ptr) {
                 WARN("ptr(nullptr)");
-                return std::shared_ptr<T>();
+                return shared_ptr<T>();
             }
-            if (head.compare_exchange_strong(old_head, ptr->next, std::memory_order_relaxed)) {
-                std::shared_ptr<T> res;
+            if (head.compare_exchange_strong(old_head, ptr->next, memory_order_relaxed)) {
+                shared_ptr<T> res;
                 res.swap(ptr->data);
                 int const count_increase = old_head.external_count - 2;
-                if (ptr->intrenal_count.fetch_add(count_increase, std::memory_order_release) == -count_increase) {
+                if (ptr->intrenal_count.fetch_add(count_increase, memory_order_release) == -count_increase) {
                     delete ptr;
                 }
                 return res;
-            } else if (ptr->intrenal_count.fetch_add(-1, std::memory_order_relaxed) == 1) {
-                ptr->intrenal_count.load(std::memory_order_acquire);
+            } else if (ptr->intrenal_count.fetch_add(-1, memory_order_relaxed) == 1) {
+                ptr->intrenal_count.load(memory_order_acquire);
                 delete ptr;
             }
         }
@@ -421,12 +441,12 @@ template<typename T>
 class lock_free_queue {
 private:
     struct node {
-        std::shared_ptr<T> data;
+        shared_ptr<T> data;
         node* next;
         node() : data(nullptr), next(nullptr) {}
     };
-    std::atomic<node*> head;
-    std::atomic<node*> tail;
+    atomic<node*> head;
+    atomic<node*> tail;
     node* pop_head() {
         TICK();
         node* const old_head = head.load();
@@ -449,20 +469,20 @@ public:
             delete old_haed;
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
         node* old_head = pop_head();
         if (!old_head) {
-            return std::make_shared<T>();
+            return make_shared<T>();
         }
-        std::shared_ptr<T> const res(old_head->data);
+        shared_ptr<T> const res(old_head->data);
         delete old_head;
         old_head = nullptr;
         return res;
     }
     void push(T new_value) {
         TICK();
-        std::shared_ptr<T> new_data(std::make_shared<T>(new_value));
+        shared_ptr<T> new_data(make_shared<T>(new_value));
         node* p = new node();
         node* const old_tail = tail.load();
         old_tail->data.swap(new_data);
@@ -483,15 +503,15 @@ private:
         int external_count;
         node* ptr;
     };
-    std::atomic<counted_node_ptr> head;
-    std::atomic<counted_node_ptr> tail;
+    atomic<counted_node_ptr> head;
+    atomic<counted_node_ptr> tail;
     struct node_counter {
         unsigned internal_count : 30;
         unsigned external_counters : 2;
     };
     struct node {
-        std::atomic<T*> data;
-        std::atomic<node_counter> count;
+        atomic<T*> data;
+        atomic<node_counter> count;
         counted_node_ptr next;
         node() {
             TICK();
@@ -505,19 +525,19 @@ private:
             TICK();
         }
     };
-    static void increase_external_count(std::atomic<counted_node_ptr>& counter, counted_node_ptr& old_counter) {
+    static void increase_external_count(atomic<counted_node_ptr>& counter, counted_node_ptr& old_counter) {
         TICK();
         counted_node_ptr new_counter;
         do {
         } while (!counter.compare_exchange_strong(old_counter, new_counter,
-            std::memory_order_acquire, std::memory_order_relaxed));
+            memory_order_acquire, memory_order_relaxed));
         old_counter.external_count = new_counter.external_count;
     }
 
 public:
     void push(T new_value) {
         TICK();
-        std::unique_ptr<T> new_data(new T(new_value));
+        unique_ptr<T> new_data(new T(new_value));
         counted_node_ptr new_next;
         new_next.ptr = new node;
         new_next.external_count = 1;
@@ -537,9 +557,9 @@ public:
             old_tail.ptr->release_ref();
         }
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr old_head = head.load(std::memory_order_relaxed);
+        counted_node_ptr old_head = head.load(memory_order_relaxed);
         for (;;) {
             WARN("pop loop");
             increase_external_count(head, old_head);
