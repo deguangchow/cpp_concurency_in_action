@@ -32,18 +32,18 @@ private:
 public:
     thread_safe_stack() {}
     thread_safe_stack(const thread_safe_stack &other) : m(std::mutex()) {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(other.m);
         data = other.data;
     }
     thread_safe_stack& operator=(const thread_safe_stack &) = delete;
     void push(T new_value) {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(m);
         data.push(std::move(new_value));
     }
     std::shared_ptr<T> pop() {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(m);
         if (data.empty()) {
 #if 0
@@ -57,7 +57,7 @@ public:
         return res;
     }
     void pop(T &value) {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(m);
         if (data.empty()) {
             throw empty_stack();
@@ -66,7 +66,7 @@ public:
         data.pop();
     }
     bool empty() const {
-        TICK();
+        //TICK();
         std::lock_guard<std::mutex> lock(m);
         return data.empty();
     }

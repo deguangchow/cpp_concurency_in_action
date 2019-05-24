@@ -130,7 +130,7 @@ int main() {
 #endif
 
 #if 0//chapter8
-    design_conc_code::parallel_quick_sort_test();
+    design_conc_code::test_parallel_quick_sort();
     design_conc_code::processing_loop_test();
     design_conc_code::processing_loop_with_mutex_test();
     design_conc_code::processing_loop_protect_test();
@@ -143,6 +143,7 @@ int main() {
     design_conc_code::parallel_find_async_test();
     design_conc_code::parallel_partial_sum_test();
 #endif
+    design_conc_code::test_parallel_quick_sort();
 
 #if 0//chapter9
     adv_thread_mg::test_simple_thread_pool();

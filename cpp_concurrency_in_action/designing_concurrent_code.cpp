@@ -14,29 +14,14 @@ namespace design_conc_code {
 //8.1.1 Dividing data between threads before processing begins
 //8.1.2 Dividing date recursively
 //Listing 8.1 Parallel Quicksort using a stack of pending chunks to sort
-void parallel_quick_sort_test() {
+void test_parallel_quick_sort() {
     TICK();
-    std::list<unsigned> lst_input{
-#if 0
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-#else
-        2, 1
-#endif
-    };
-    std::list<unsigned> lst_result = parallel_quick_sort<unsigned>(lst_input);
-    for (auto const &pos : lst_result) {
-        std::cout << pos << ", ";
+
+    list<unsigned> lstResult = design_conc_code::parallel_quick_sort<unsigned>(LST_NUMBERS);
+    for (auto const &pos : lstResult) {
+        cout << pos << ", ";
     }
-    std::cout << std::endl;
+    cout << endl;
 }
 
 //8.1.3 Dividing work by task type
@@ -47,27 +32,27 @@ void parallel_quick_sort_test() {
 void do_something() {
     //TICK();
 }
-std::atomic<unsigned long> counter(0);
+atomic<unsigned long> counter(0);
 void processing_loop() {
     TICK();
-    while (counter.fetch_add(1, std::memory_order_relaxed) < 10000000) {
-        INFO("%d", counter.load(std::memory_order_relaxed));
+    while (counter.fetch_add(1, memory_order::memory_order_relaxed) < 10000000) {
+        INFO("%d", counter.load(memory_order::memory_order_relaxed));
         do_something();
     }
 }
 void processing_loop_test() {
     TICK();
     unsigned const& THREAD_NUMS = 5;
-    std::vector<std::thread> vct_pro(THREAD_NUMS);
+    vector<thread> vct_pro(THREAD_NUMS);
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i] = std::thread(&processing_loop);
+        vct_pro[i] = thread(&processing_loop);
     }
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_pro[i].join();
     }
 }
 
-std::mutex m;
+mutex m;
 my_data data;
 bool done_processing(my_data const& data) {
     TICK();
@@ -77,7 +62,7 @@ void processing_loop_with_mutex() {
     TICK();
     while (true) {
         WARN("processing_loop_with_mutex() loop");
-        std::lock_guard<std::mutex> lock(m);
+        lock_guard<mutex> lock(m);
         if (done_processing(data)) {
             break;
         }
@@ -86,9 +71,9 @@ void processing_loop_with_mutex() {
 void processing_loop_with_mutex_test() {
     TICK();
     unsigned const& THREAD_NUMS = 5;
-    std::vector<std::thread> vct_pro(THREAD_NUMS);
+    vector<thread> vct_pro(THREAD_NUMS);
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i] = std::thread(&processing_loop_with_mutex);
+        vct_pro[i] = thread(&processing_loop_with_mutex);
     }
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_pro[i].join();
@@ -107,7 +92,7 @@ void processing_loop_protect() {
     TICK();
     while (true) {
         WARN("processing_loop_protect_test() loop");
-        std::lock_guard<std::mutex> lock(p_data.m);
+        lock_guard<mutex> lock(p_data.m);
         if (done_processing(p_data)) {
             break;
         }
@@ -116,24 +101,24 @@ void processing_loop_protect() {
 void processing_loop_protect_test() {
     TICK();
     unsigned const& THREAD_NUMS = 5;
-    std::vector<std::thread> vct_pro(THREAD_NUMS);
+    vector<thread> vct_pro(THREAD_NUMS);
 #if 0
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i] = std::thread(&processing_loop_protect);
+        vct_pro[i] = thread(&processing_loop_protect);
     }
     for (unsigned i = 0; i < THREAD_NUMS; ++i) {
         vct_pro[i].join();
     }
 #else
-    std::for_each(vct_pro.begin(), vct_pro.end(), [](std::thread &t) {t = std::thread(&processing_loop_protect); });
-    std::for_each(vct_pro.begin(), vct_pro.end(), std::mem_fn(&std::thread::join));
+    for_each(vct_pro.begin(), vct_pro.end(), [](thread &t) {t = thread(&processing_loop_protect); });
+    for_each(vct_pro.begin(), vct_pro.end(), mem_fn(&thread::join));
 #endif
 }
 
-//Listing 8.3 A parallel version of std::accumulate using std::packaged_task
+//Listing 8.3 A parallel version of accumulate using packaged_task
 void parallel_accumulate_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -149,10 +134,10 @@ void parallel_accumulate_test() {
     INFO("ret=%d\r\n", ret);
 }
 
-//Listing 8.4 An exception-safe parallel version of std::accumulate
+//Listing 8.4 An exception-safe parallel version of accumulate
 void parallel_accumulate_join_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -168,10 +153,10 @@ void parallel_accumulate_join_test() {
     INFO("ret=%d\r\n", ret);
 }
 
-//Listing 8.5 An exception-safe parallel version of std::accumulate using std::async
+//Listing 8.5 An exception-safe parallel version of accumulate using async
 void parallel_accumulate_async_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -189,8 +174,8 @@ void parallel_accumulate_async_test() {
 
 //8.4.4 Improving responsiveness with concurrency
 //Listing 8.6 Separating GUI thread from task thread
-std::thread task_thread;
-std::atomic<bool> task_canceled(false);
+thread task_thread;
+atomic<bool> task_canceled(false);
 design_conc_code::event_data get_event() {
     TICK();
     return event_data();
@@ -203,7 +188,7 @@ void process(event_data const& event) {
     switch (event.type) {
     case event_data::start_task:
         task_canceled = false;
-        task_thread = std::thread(task);
+        task_thread = thread(task);
         break;
     case event_data::stop_task:
         task_canceled = true;
@@ -252,10 +237,10 @@ void task() {
     }
 }
 
-//Listing 8.7 A parallel version of std::for_each
+//Listing 8.7 A parallel version of for_each
 void parallel_for_each_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -265,11 +250,11 @@ void parallel_for_each_test() {
     parallel_for_each(vct.begin(), vct.end(), [](unsigned const& val) {INFO("%d", val); });
 }
 
-//Listing 8.8 A parallel version of std::for_each using std::async
+//Listing 8.8 A parallel version of for_each using async
 void parallel_for_each_async_test() {
     TICK();
 
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -279,18 +264,18 @@ void parallel_for_each_async_test() {
     parallel_for_each_async(vct.begin(), vct.end(), [](unsigned const& val) {INFO("%d", val); });
 }
 
-//8.5.2 A parallel implementation of std::find
+//8.5.2 A parallel implementation of find
 //Listing 8.9 An implementation of a parallel find algorithm
 void parallel_find_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
     };
     unsigned match = 8;
 #if 0
     match = 88;
 #endif
-    std::vector<unsigned>::iterator pos = parallel_find(vct.begin(), vct.end(), match);
+    vector<unsigned>::iterator pos = parallel_find(vct.begin(), vct.end(), match);
     if (pos != vct.end()) {
         INFO("find");
     } else {
@@ -298,18 +283,18 @@ void parallel_find_test() {
     }
 }
 
-//Listing 8.10 An implementation of a parallel find algorithm using std::async
+//Listing 8.10 An implementation of a parallel find algorithm using async
 void parallel_find_async_test() {
     TICK();
-    std::vector<unsigned> vct {
+    vector<unsigned> vct {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
     };
     unsigned match = 8;
 #if 0
     match = 88;
 #endif
-    std::atomic<bool> done(false);
-    std::vector<unsigned>::iterator pos = parallel_find_async(vct.begin(), vct.end(), match, done);
+    atomic<bool> done(false);
+    vector<unsigned>::iterator pos = parallel_find_async(vct.begin(), vct.end(), match, done);
     if (pos != vct.end()) {
         INFO("find");
     } else {
@@ -317,11 +302,11 @@ void parallel_find_async_test() {
     }
 }
 
-//8.5.3 A parallel implementation of std::partial_sum
+//8.5.3 A parallel implementation of partial_sum
 //Listing 8.11 Calculating partial sums in parallel by dividing the problem
 void parallel_partial_sum_test() {
     TICK();
-    std::vector<unsigned> vct = {
+    vector<unsigned> vct = {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -343,7 +328,7 @@ void parallel_partial_sum_test() {
 //Listing 8.13 A parallel implementation of partial_sum by pairwise updates
 void parallel_partial_sum_pairwise_test() {
     TICK();
-    std::vector<unsigned> vct = {
+    vector<unsigned> vct = {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,

@@ -85,7 +85,7 @@ Tick::~Tick() {
 #if _WIN32
     //printf("%s tick %ld[ms]\n", fn, t2 - t);
     if (t2 - t > 500) {
-        WARN(" !!!Function[%5s] block too long, please attention.\n", fn);
+        WARN(" !!!Function[%5s] block too long, please attention.", fn);
     }
 #endif
 #endif //_DEBUG
