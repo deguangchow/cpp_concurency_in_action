@@ -42,6 +42,7 @@ public:
     static void warn(char* format, ...);
     static void debug(char* format, ...);
     static void info(char* format, ...);
+    static void print(char* format, ...);
     static void logfile(char* format, ...);
     static void progress(char* format, ...);
 
@@ -89,6 +90,7 @@ public:
 #define WARN(_F_, ...)Tick::warn(_F_, __VA_ARGS__)
 #define DEBUG(_F_, ...)Tick::debug(_F_, __VA_ARGS__)
 #define INFO(_F_, ...)Tick::info(_F_, __VA_ARGS__)
+#define PRINT(_F_, ...)Tick::print(_F_, __VA_ARGS__)
 #define BAR(_F_, ...)Tick::progress(_F_, __VA_ARGS__)
 #define ST(_ID)
 #define TV_LIST_INT(X)Tick::TV<std::list<int>>(X);
@@ -99,6 +101,7 @@ public:
 #define WARN(_F_, ...)
 #define DEBUG(_F_, ...)
 #define INFO(_F_, ...)Tick::info(_F_, __VA_ARGS__)
+#define PRINT(_F_, ...)
 #define BAR(_F_, ...)
 #define ST(_ID)Tick FS_DO_JOIN(tick_, __COUNTER__)(_ID)
 #define TV_LIST_INT(X)

@@ -132,18 +132,18 @@ int main() {
 #if 0//chapter8
     design_conc_code::test_parallel_quick_sort();
     design_conc_code::test_processing_loop();
-    design_conc_code::processing_loop_with_mutex_test();
-    design_conc_code::processing_loop_protect_test();
-    design_conc_code::parallel_accumulate_test();
-    design_conc_code::parallel_accumulate_join_test();
-    design_conc_code::parallel_accumulate_async_test();
-    design_conc_code::parallel_for_each_test();
-    design_conc_code::parallel_for_each_async_test();
-    design_conc_code::parallel_find_test();
-    design_conc_code::parallel_find_async_test();
-    design_conc_code::parallel_partial_sum_test();
+    design_conc_code::test_processing_loop_with_mutex();
+    design_conc_code::test_processing_loop_protect();
+    design_conc_code::test_parallel_accumulate();
+    design_conc_code::test_parallel_accumulate_join();
+    design_conc_code::test_parallel_accumulate_async();
+    design_conc_code::test_parallel_for_each();
+    design_conc_code::test_parallel_for_each_async();
+    design_conc_code::test_parallel_find();
+    design_conc_code::test_parallel_find_async();
+    design_conc_code::test_parallel_partial_sum();
+    design_conc_code::test_parallel_partial_sum_pairwise();
 #endif
-    design_conc_code::test_processing_loop();
 
 #if 0//chapter9
     adv_thread_mg::test_simple_thread_pool();

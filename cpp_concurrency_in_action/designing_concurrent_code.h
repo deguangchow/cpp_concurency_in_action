@@ -108,8 +108,7 @@ void test_parallel_quick_sort();
 //8.2.2 Data contention and cache ping-pang
 void test_processing_loop();
 
-void processing_loop_with_mutex();
-void processing_loop_with_mutex_test();
+void test_processing_loop_with_mutex();
 
 //8.2.3 False sharing
 
@@ -136,8 +135,7 @@ struct my_data {
 };
 my_data some_array[256];
 #endif
-void processing_loop_protect();
-void processing_loop_protect_test();
+void test_processing_loop_protect();
 
 //8.4 Additional considerations when designing for concurrency
 //8.4.1 Exception safety in parallel algorithms
@@ -147,57 +145,60 @@ void processing_loop_protect_test();
 template<typename Iterator, typename T>
 struct accumulate_block {
     T operator()(Iterator first, Iterator last) {
-        //TICK();
+        TICK();
         return accumulate(first, last, T());
     }
 };
 template<typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
-    unsigned long const length = distance(first, last);
-    if (!length) {
+    unsigned long const LENGTH = distance(first, last);
+    if (!LENGTH) {
         return init;
     }
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
 
-    vector<future<T>> futures(num_threads - 1);
-    vector<thread> threads(num_threads - 1);
+    unsigned long const&    MIN_PER_THREAD = 25;
+    unsigned long const&    MAX_THREADS = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const&    NUM_THREADS = min(HARDWARE_CONCURRENCY, MAX_THREADS);
+    unsigned long const&    BLOCK_SIZE = LENGTH / NUM_THREADS;
+    unsigned long const&    THREAD_SIZE = NUM_THREADS - 1;
 
-    Iterator block_start = first;
-    T last_result;
+    vector<future<T>>       vctFutures(THREAD_SIZE);
+    vector<thread>          vctThreads(THREAD_SIZE);
+
+    Iterator                posBlockStart = first;
+    T                       tLastResult;
     try {
-        for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-            Iterator block_end = block_start;
-            advance(block_end, block_size);
-            //be careful about the ()!!!
-            packaged_task<T(Iterator, Iterator)> task((accumulate_block<Iterator, T>()));
-            futures[i] = task.get_future();
-            threads[i] = thread(move(task), block_start, block_end);
-            block_start = block_end;
-        }
-        last_result = accumulate_block<Iterator, T>()(block_start, last);
+        for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+            Iterator posBlockEnd = posBlockStart;
+            advance(posBlockEnd, BLOCK_SIZE);
 
-        for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
-    }
-    catch (...) {
-        for (unsigned i = 0; i < (num_threads - 1); ++i) {
-            if (threads[i].joinable()) {
-                threads[i].join();
+            //be careful about the ()!!!
+            packaged_task<T(Iterator, Iterator)> packagedTask((accumulate_block<Iterator, T>()));
+            vctFutures[i] = packagedTask.get_future();
+            vctThreads[i] = thread(move(packagedTask), posBlockStart, posBlockEnd);
+            posBlockStart = posBlockEnd;
+        }
+        tLastResult = accumulate_block<Iterator, T>()(posBlockStart, last);
+
+        for_each(vctThreads.begin(), vctThreads.end(), mem_fn(&thread::join));
+    } catch (...) {
+        ERR("...");
+        for (unsigned i = 0; i < THREAD_SIZE; ++i) {
+            if (vctThreads[i].joinable()) {
+                vctThreads[i].join();
             }
         }
     }
 
     T result = init;
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        result += futures[i].get();
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        result += vctFutures[i].get();
     }
-    result += last_result;
+    result += tLastResult;
     return result;
 }
-void parallel_accumulate_test();
+void test_parallel_accumulate();
 
 //Listing 8.4 An exception-safe parallel version of accumulate
 class join_threads {
@@ -216,61 +217,65 @@ public:
 template<typename Iterator, typename T>
 T parallel_accumulate_join(Iterator first, Iterator last, T init) {
     TICK();
-    unsigned long const length = distance(first, last);
-    if (!length) {
+    unsigned long const LENGTH = distance(first, last);
+    if (!LENGTH) {
         return init;
     }
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
 
-    vector<future<T>> futures(num_threads - 1);
-    vector<thread> threads(num_threads - 1);
-    join_threads joiner(threads);
+    unsigned long const&    MIN_PER_THREAD = 25;
+    unsigned long const&    MAX_THREADS = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const&    NUM_THREADS = min(HARDWARE_CONCURRENCY, MAX_THREADS);
+    unsigned long const&    BLOCK_SIZE = LENGTH / NUM_THREADS;
+    unsigned long const&    THREAD_SIZE = NUM_THREADS - 1;
 
-    Iterator block_start = first;
+    vector<future<T>>       vctFutures(THREAD_SIZE);
+    vector<thread>          vctThreads(THREAD_SIZE);
+    join_threads            threadsJoiner(vctThreads);
 
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        Iterator block_end = block_start;
-        advance(block_end, block_size);
+    Iterator posBlockStart = first;
+
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        Iterator block_end = posBlockStart;
+        advance(block_end, BLOCK_SIZE);
         //be careful about the ()!!!
         packaged_task<T(Iterator, Iterator)> task((accumulate_block<Iterator, T>()));
-        futures[i] = task.get_future();
-        threads[i] = thread(move(task), block_start, block_end);
-        block_start = block_end;
+        vctFutures[i] = task.get_future();
+        vctThreads[i] = thread(move(task), posBlockStart, block_end);
+        posBlockStart = block_end;
     }
-    T last_result = accumulate_block<Iterator, T>()(block_start, last);
+    T tLastResult = accumulate_block<Iterator, T>()(posBlockStart, last);
 
-    for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
+    for_each(vctThreads.begin(), vctThreads.end(), mem_fn(&thread::join));
 
     T result = init;
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        result += futures[i].get();
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        result += vctFutures[i].get();
     }
-    result += last_result;
+    result += tLastResult;
     return result;
 }
-void parallel_accumulate_join_test();
+void test_parallel_accumulate_join();
 
 //Listing 8.5 An exception-safe parallel version of accumulate using async
 template<typename Iterator, typename T>
 T parallel_accumulate_async(Iterator first, Iterator last, T init) {
     TICK();
-    unsigned long const length = distance(first, last);
-    unsigned long const max_chunk_size = 25;
-    if (length <= max_chunk_size) {
+    unsigned long const LENGTH = distance(first, last);
+    unsigned long const MAX_CHUNK_SIZE = 25;
+    if (LENGTH <= MAX_CHUNK_SIZE) {
         return accumulate(first, last, init);
     } else {
-        Iterator mid_point = first;
-        advance(mid_point, length / 2);
-        future<T> first_half_result = async(&parallel_accumulate_async<Iterator, T>, first, mid_point, init);
-        T second_half_result = parallel_accumulate_async(mid_point, last, T());
-        INFO("second_half_result=%d", second_half_result);
-        return first_half_result.get() + second_half_result;
+        Iterator posMid = first;
+        advance(posMid, LENGTH / 2);
+        future<T> tHalfResult_f = async(&parallel_accumulate_async<Iterator, T>, first, posMid, init);
+        T tSecondHalfResult = parallel_accumulate_async(posMid, last, T());
+
+        auto const& tHalfResult = tHalfResult_f.get();
+        INFO("{%d, %d}", tHalfResult, tSecondHalfResult);
+        return tHalfResult + tSecondHalfResult;
     }
 }
-void parallel_accumulate_async_test();
+void test_parallel_accumulate_async();
 
 //8.4.2 Scalability and Amdahl`s law
 
@@ -299,61 +304,68 @@ void task();
 
 //Listing 8.7 A parallel version of for_each
 template<typename Iterator, typename Func>
-void parallel_for_each(Iterator first, Iterator last, Func f) {
+void parallel_for_each(Iterator first, Iterator last, Func&& f) {
     TICK();
-    unsigned long const length = distance(first, last);
-    if (!length) {
+    unsigned long const LENGTH = distance(first, last);
+    if (!LENGTH) {
         return;
     }
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
 
-    vector<future<void>> futures(num_threads - 1);
-    vector<thread> threads(num_threads - 1);
-    join_threads joiner(threads);
+    unsigned long const&    MIN_PER_THREAD = 25;
+    unsigned long const&    MAX_THREADS = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const&    NUM_THREADS = min(HARDWARE_CONCURRENCY, MAX_THREADS);
+    unsigned long const&    BLOCK_SIZE = LENGTH / NUM_THREADS;
+    unsigned long const&    THREAD_SIZE = NUM_THREADS - 1;
 
-    Iterator block_start = first;
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        Iterator block_end = block_start;
-        advance(block_end, block_size);
-        packaged_task<void(void)> task([=]() {for_each(block_start, block_end, f); });
-        futures[i] = task.get_future();
-        threads[i] = thread(move(task));
-        block_start = block_end;
+    vector<future<void>>    vctFutures(THREAD_SIZE);
+    vector<thread>          vctThreads(THREAD_SIZE);
+    join_threads            threadsJoiner(vctThreads);
+
+    Iterator                posBlockStart = first;
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        Iterator posBlockEnd = posBlockStart;
+        advance(posBlockEnd, BLOCK_SIZE);
+        packaged_task<void(void)> packagedTask([=]() {
+            for_each(posBlockStart, posBlockEnd, f);
+        });
+        vctFutures[i] = packagedTask.get_future();
+        vctThreads[i] = thread(move(packagedTask));
+        posBlockStart = posBlockEnd;
     }
-    for_each(block_start, last, f);
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        futures[i].get();
+
+    for_each(posBlockStart, last, f);
+
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        vctFutures[i].get();
     }
 }
-void parallel_for_each_test();
+void test_parallel_for_each();
 
 //Listing 8.8 A parallel version of for_each using async
 template<typename Iterator, typename Func>
 void parallel_for_each_async(Iterator first, Iterator last, Func f) {
     TICK();
-    unsigned long const length = distance(first, last);
-    if (!length) {
+    unsigned long const& LENGTH = distance(first, last);
+    if (!LENGTH) {
         return;
     }
-    unsigned long const min_per_thread = 25;
-    if (length < (2 * min_per_thread)) {
+    unsigned long const& MIN_PER_THREAD = 25;
+    if (LENGTH < (2 * MIN_PER_THREAD)) {
         for_each(first, last, f);
     } else {
-        Iterator const mid_point = first + length / 2;
-        future<void> first_half = async(&parallel_for_each_async<Iterator, Func>, first, mid_point, f);
-        parallel_for_each_async(mid_point, last, f);
-        first_half.get();
+        Iterator const& posMid      = first + LENGTH / 2;
+        future<void> firstHalf_f    = async(&parallel_for_each_async<Iterator, Func>, first, posMid, f);
+        parallel_for_each_async(posMid, last, f);
+        firstHalf_f.get();
     }
 }
-void parallel_for_each_async_test();
+void test_parallel_for_each_async();
 
 //8.5.2 A parallel implementation of find
 //Listing 8.9 An implementation of a parallel find algorithm
 template<typename Iterator, typename MatchType>
 Iterator parallel_find(Iterator first, Iterator last, MatchType match) {
+    TICK();
     struct find_element {
         void operator()(Iterator begin, Iterator end, MatchType match,
             promise<Iterator>* result, atomic<bool>* done_flag) {
@@ -363,6 +375,7 @@ Iterator parallel_find(Iterator first, Iterator last, MatchType match) {
                     if (*begin == match) {
                         result->set_value(begin);
                         done_flag->store(true);
+                        DEBUG("bingo");
                         return;
                     }
                 }
@@ -375,63 +388,72 @@ Iterator parallel_find(Iterator first, Iterator last, MatchType match) {
             }
         }
     };
-    unsigned long const length = distance(first, last);
-    if (!length) {
-        return last;
-    }
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
 
-    promise<Iterator> result;
-    atomic<bool> done_flag(false);
-    vector<thread> threads(num_threads - 1);
-    {
-        join_threads joiner(threads);
-        Iterator block_start = first;
-        for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-            Iterator block_end = block_start;
-            advance(block_end, block_size);
-            threads[i] = thread(find_element(), block_start, block_end, match, &result, &done_flag);
-            block_start = block_end;
-        }
-        find_element()(block_start, last, match, &result, &done_flag);
-    }
-    if (!done_flag.load()) {
+    unsigned long const LENGTH = distance(first, last);
+    if (!LENGTH) {
         return last;
     }
-    return result.get_future().get();
+
+    unsigned long const&    MIN_PER_THREAD = 25;
+    unsigned long const&    MAX_THREADS = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const&    NUM_THREADS = min(HARDWARE_CONCURRENCY, MAX_THREADS);
+    unsigned long const&    BLOCK_SIZE = LENGTH / NUM_THREADS;
+    unsigned long const&    THREAD_SIZE = NUM_THREADS - 1;
+
+    promise<Iterator>       posResult_p;
+    atomic<bool>            bDone_a(false);
+    vector<thread>          vctThreads(THREAD_SIZE);
+    {
+        join_threads        threadsJoiner(vctThreads);
+        Iterator            posBlockStart = first;
+        for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+            Iterator block_end = posBlockStart;
+            advance(block_end, BLOCK_SIZE);
+            vctThreads[i] = thread(find_element(), posBlockStart, block_end, match, &posResult_p, &bDone_a);
+            posBlockStart = block_end;
+        }
+        find_element()(posBlockStart, last, match, &posResult_p, &bDone_a);
+    }
+    if (!bDone_a.load()) {
+        return last;
+    }
+    return posResult_p.get_future().get();
 }
-void parallel_find_test();
+void test_parallel_find();
 
 //Listing 8.10 An implementation of a parallel find algorithm using async
 template<typename Iterator, typename MatchType>
 Iterator parallel_find_async(Iterator first, Iterator last, MatchType match, atomic<bool>& done) {
+    if (done.load()) {
+        return first;
+    }
+    TICK();
     try {
-        unsigned long const length = distance(first, last);
-        unsigned long const min_per_thread = 25;
-        if (length < (2 * min_per_thread)) {
+        unsigned long const&    LENGTH = distance(first, last);
+        unsigned long const&    MIN_PER_THREAD = 25;
+        if (LENGTH < (2 * MIN_PER_THREAD)) {
             for (; (first != last) && !done.load(); ++first) {
                 if (*first == match) {
+                    DEBUG("bingo");
                     done = true;
                     return first;
                 }
             }
             return last;
         } else {
-            Iterator const mid_point = first + (length / 2);
-            future<Iterator> async_result = async(&parallel_find_async<Iterator, MatchType>,
-                mid_point, last, match, ref(done));
-            Iterator const direct_result = parallel_find_async(first, mid_point, match, done);
-            return (direct_result == mid_point) ? async_result.get() : direct_result;
+            Iterator const&     posMid = first + (LENGTH / 2);
+            future<Iterator>    posAsyncResult_f = async(&parallel_find_async<Iterator, MatchType>,
+                posMid, last, match, ref(done));
+            Iterator const&     posDirectResult = parallel_find_async(first, posMid, match, done);
+            return (posDirectResult == posMid) ? posAsyncResult_f.get() : posDirectResult;
         }
     } catch (...) {
+        ERR("...");
         done = true;
         throw;
     }
 }
-void parallel_find_async_test();
+void test_parallel_find_async();
 
 //8.5.3 A parallel implementation of partial_sum
 //Listing 8.11 Calculating partial sums in parallel by dividing the problem
@@ -466,38 +488,41 @@ void parallel_partial_sum(Iterator first, Iterator last) {
             }
         }
     };
-    unsigned long const length = distance(first, last);
-    if (!length) {
+
+    unsigned long const&        LENGTH = distance(first, last);
+    if (!LENGTH) {
         return;
     }
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
+
+    unsigned long const&        MIN_PER_THREAD  = 25;
+    unsigned long const&        MAX_THREADS     = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const&        NUM_THREADS     = min(HARDWARE_CONCURRENCY, MAX_THREADS);
+    unsigned long const&        BLOCK_SIZE      = LENGTH / NUM_THREADS;
+    unsigned long const&        THREAD_SIZE     = NUM_THREADS - 1;
 
     typedef typename Iterator::value_type value_type;
-    vector<thread> threads(num_threads - 1);
-    vector<promise<value_type>> end_value(num_threads - 1);
-    vector<future<value_type>> previous_end_values;
-    previous_end_values.reserve(num_threads - 1);
+    vector<thread>              vctThreads(THREAD_SIZE);
+    vector<promise<value_type>> vctPromiseValues(THREAD_SIZE);
+    vector<future<value_type>>  vctFuturesValues;
+    vctFuturesValues.reserve(THREAD_SIZE);
 
-    join_threads joiner(threads);
-    Iterator block_start = first;
-    for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-        Iterator block_last = block_start;
-        advance(block_last, block_size);
-        threads[i] = thread(process_chunk(), block_start, block_last,
-            (i != 0) ? &previous_end_values[i - 1] : 0, &end_value[i]);
-        block_start = block_last;
-        ++block_start;
-        previous_end_values.push_back(end_value[i].get_future());
+    join_threads                threadsJoiner(vctThreads);
+    Iterator                    posBlockStart = first;
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        Iterator block_last = posBlockStart;
+        advance(block_last, BLOCK_SIZE);
+        vctThreads[i] = thread(process_chunk(), posBlockStart, block_last,
+            (i != 0) ? &vctFuturesValues[i - 1] : 0, &vctPromiseValues[i]);
+        posBlockStart = block_last;
+        ++posBlockStart;
+        vctFuturesValues.push_back(vctPromiseValues[i].get_future());
     }
-    Iterator final_element = block_start;
-    advance(final_element, distance(block_start, last) - 1);
-    process_chunk()(block_start, final_element,
-        (num_threads > 1) ? &previous_end_values.back() : 0, 0);
+    Iterator posFinal = posBlockStart;
+    advance(posFinal, distance(posBlockStart, last) - 1);
+    process_chunk()(posBlockStart, posFinal,
+        (NUM_THREADS > 1) ? &vctFuturesValues.back() : 0, 0);
 }
-void parallel_partial_sum_test();
+void test_parallel_partial_sum();
 
 #if 0
 //Listing 8.12 A simple barrier class
@@ -523,27 +548,28 @@ public:
 #else
 //Listing 8.13 A parallel implementation of partial_sum by pairwise updates
 struct barrier {
-    atomic<unsigned> count;
-    atomic<unsigned> spaces;
-    atomic<unsigned> generation;
-    explicit barrier(unsigned count_) : count(count_), spaces(count_), generation(0) {}
+    atomic<unsigned> uCount_a;
+    atomic<unsigned> uSpaces_a;
+    atomic<unsigned> uGeneration_a;
+    explicit barrier(unsigned count_) : uCount_a(count_), uSpaces_a(count_), uGeneration_a(0) {}
     void wait() {
-        unsigned const gen = generation.load();
-        if (!--spaces) {
-            spaces = count.load();
-            ++generation;
+        TICK();
+        unsigned const uGeneration = uGeneration_a.load();
+        if (!--uSpaces_a) {
+            uSpaces_a = uCount_a.load();
+            ++uGeneration_a;
         } else {
-            while (generation.load() == gen) {
+            while (uGeneration_a.load() == uGeneration) {
                 yield();
             }
         }
     }
     void done_waiting() {
         TICK();
-        --count;
-        if (!--spaces) {
-            spaces = count.load();
-            ++generation;
+        --uCount_a;
+        if (!--uSpaces_a) {
+            uSpaces_a = uCount_a.load();
+            ++uGeneration_a;
         }
     }
 };
@@ -573,23 +599,24 @@ void parallel_partial_sum_pairwise(Iterator first, Iterator last) {
             b.done_waiting();
         }
     };
-    unsigned long const length = distance(first, last);
-    if (length <= 1) {
+    unsigned long const&    LENGTH = distance(first, last);
+    if (LENGTH <= 1) {
         return;
     }
-    vector<value_type> buffer(length);
-    barrier b(length);
+    unsigned long const&    THREAD_SIZE = LENGTH - 1;
+    vector<value_type>      vctBuffer(LENGTH);
+    barrier                 bar(LENGTH);
 
-    vector<thread> threads(length - 1);
-    join_threads joiner(threads);
+    vector<thread>          vctThreads(THREAD_SIZE);
+    join_threads            threadsJoiner(vctThreads);
 
-    Iterator block_start = first;
-    for (unsigned long i = 0; i < (length - 1); ++i) {
-        threads[i] = thread(process_element(), first, last, ref(buffer), i, ref(b));
+    Iterator                posBlockStart = first;
+    for (unsigned long i = 0; i < THREAD_SIZE; ++i) {
+        vctThreads[i] = thread(process_element(), first, last, ref(vctBuffer), i, ref(bar));
     }
-    process_element()(first, last, buffer, length - 1, b);
+    process_element()(first, last, vctBuffer, THREAD_SIZE, bar);
 }
-void parallel_partial_sum_pairwise_test();
+void test_parallel_partial_sum_pairwise();
 
 }//namespace design_conc_code
 

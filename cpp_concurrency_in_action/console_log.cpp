@@ -103,6 +103,16 @@ void Tick::info(char* format, ...) {
     printf("\r\n");
 }
 
+void Tick::print(char* format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
+    RedOnWhite();
+    vprintf(format, vl);
+    DefaultOnBlack();
+    va_end(vl);
+}
+
 void Tick::debug(char* format, ...) {
     va_list vl;
     va_start(vl, format);
@@ -132,7 +142,7 @@ void Tick::error(char* format, ...) {
     va_start(vl, format);
     std::lock_guard<std::mutex> lock_console_log(mutex_console_log);
     RedOnBlack();
-    printf("\n[ERROR %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
+    printf("[ERROR %s %5d]%*s", unixTime2Str(), std::this_thread::get_id(), FuncDeep, "");
     vprintf(format, vl);
     DefaultOnBlack();
     va_end(vl);

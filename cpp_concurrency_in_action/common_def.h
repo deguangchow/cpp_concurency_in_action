@@ -23,7 +23,8 @@ static const unsigned long BILLION                  = 100000000;    //亿
 
 static const unsigned BUFFER_1024                   = 1024;         //缓冲区大小(1024)
 
-static const unsigned long& HARDWARE_CONCURRENCY    = thread::hardware_concurrency();//当前CPU核心数
+static const unsigned long& HARDWARE_CONCURRENCY    =
+thread::hardware_concurrency() != 0 ? thread::hardware_concurrency() : 2;//当前CPU核心数
 
 static const unsigned THREAD_NUM_1                  = 1;            //线程数：1
 static const unsigned THREAD_NUM_2                  = 2;            //线程数：2

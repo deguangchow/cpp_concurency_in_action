@@ -52,8 +52,8 @@ void test_processing_loop() {
     }
 }
 
-mutex m;
-my_data data;
+mutex g_mutex;
+my_data g_myData;
 bool done_processing(my_data const& data) {
     TICK();
     return true;
@@ -61,22 +61,21 @@ bool done_processing(my_data const& data) {
 void processing_loop_with_mutex() {
     TICK();
     while (true) {
-        WARN("processing_loop_with_mutex() loop");
-        lock_guard<mutex> lock(m);
-        if (done_processing(data)) {
+        WARN("loop...");
+        lock_guard<mutex> lock(g_mutex);
+        if (done_processing(g_myData)) {
             break;
         }
     }
 }
-void processing_loop_with_mutex_test() {
+void test_processing_loop_with_mutex() {
     TICK();
-    unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_pro(THREAD_NUMS);
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i] = thread(&processing_loop_with_mutex);
+    vector<thread> vctThreads(HARDWARE_CONCURRENCY);
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreads[i] = thread(&processing_loop_with_mutex);
     }
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i].join();
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreads[i].join();
     }
 }
 
@@ -88,88 +87,53 @@ bool done_processing(protected_data const& data) {
     TICK();
     return true;
 }
-void processing_loop_protect() {
+void processing_loop_protected_data() {
     TICK();
     while (true) {
-        WARN("processing_loop_protect_test() loop");
+        WARN("loop...");
         lock_guard<mutex> lock(p_data.m);
         if (done_processing(p_data)) {
             break;
         }
     }
 }
-void processing_loop_protect_test() {
+void test_processing_loop_protect() {
     TICK();
-    unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_pro(THREAD_NUMS);
+    vector<thread> vctThreads(HARDWARE_CONCURRENCY);
 #if 0
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
         vct_pro[i] = thread(&processing_loop_protect);
     }
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
         vct_pro[i].join();
     }
 #else
-    for_each(vct_pro.begin(), vct_pro.end(), [](thread &t) {t = thread(&processing_loop_protect); });
-    for_each(vct_pro.begin(), vct_pro.end(), mem_fn(&thread::join));
+    for_each(vctThreads.begin(), vctThreads.end(), [](thread &t) {
+        t = thread(&processing_loop_protected_data);
+    });
+    for_each(vctThreads.begin(), vctThreads.end(), mem_fn(&thread::join));
 #endif
 }
 
 //Listing 8.3 A parallel version of accumulate using packaged_task
-void parallel_accumulate_test() {
+void test_parallel_accumulate() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-    };
-    unsigned ret = parallel_accumulate(vct.begin(), vct.end(), 0);
-    INFO("ret=%d\r\n", ret);
+    unsigned uResult = parallel_accumulate(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), 0);
+    INFO("parallel_accumulate()=%d", uResult);
 }
 
 //Listing 8.4 An exception-safe parallel version of accumulate
-void parallel_accumulate_join_test() {
+void test_parallel_accumulate_join() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-    };
-    unsigned ret = parallel_accumulate_join(vct.begin(), vct.end(), 0);
-    INFO("ret=%d\r\n", ret);
+    unsigned uResult = parallel_accumulate_join(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), 0);
+    INFO("parallel_accumulate_join()=%d", uResult);
 }
 
 //Listing 8.5 An exception-safe parallel version of accumulate using async
-void parallel_accumulate_async_test() {
+void test_parallel_accumulate_async() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-    };
-    unsigned ret = parallel_accumulate_async(vct.begin(), vct.end(), 0);
-    INFO("ret=%d\r\n", ret);
+    unsigned uResult = parallel_accumulate_async(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), 0);
+    INFO("parallel_accumulate_async()=%d", uResult);
 }
 
 //8.4.4 Improving responsiveness with concurrency
@@ -238,75 +202,60 @@ void task() {
 }
 
 //Listing 8.7 A parallel version of for_each
-void parallel_for_each_test() {
+void test_parallel_for_each() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-    };
-    parallel_for_each(vct.begin(), vct.end(), [](unsigned const& val) {INFO("%d", val); });
+    parallel_for_each(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), [](unsigned const& val) {
+        DEBUG("%d", val);
+        yield();
+    });
 }
 
 //Listing 8.8 A parallel version of for_each using async
-void parallel_for_each_async_test() {
+void test_parallel_for_each_async() {
     TICK();
-
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-    };
-    parallel_for_each_async(vct.begin(), vct.end(), [](unsigned const& val) {INFO("%d", val); });
+    parallel_for_each_async(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), [](unsigned const& val) {
+        DEBUG("%d", val);
+        yield();
+    });
 }
 
 //8.5.2 A parallel implementation of find
 //Listing 8.9 An implementation of a parallel find algorithm
-void parallel_find_test() {
+void test_parallel_find() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-    };
-    unsigned match = 8;
-#if 0
-    match = 88;
+    unsigned uMatch = 8;
+#if 1
+    uMatch = 88;
 #endif
-    vector<unsigned>::iterator pos = parallel_find(vct.begin(), vct.end(), match);
-    if (pos != vct.end()) {
+    auto const& posFind = parallel_find(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), uMatch);
+    if (posFind != VCT_NUMBERS.end()) {
         INFO("find");
     } else {
-        INFO("not find");
+        ERR("not find");
     }
 }
 
 //Listing 8.10 An implementation of a parallel find algorithm using async
-void parallel_find_async_test() {
+void test_parallel_find_async() {
     TICK();
-    vector<unsigned> vct {
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
-    };
-    unsigned match = 8;
+    unsigned uMatch = 8;
 #if 0
-    match = 88;
+    uMatch = 88;
 #endif
-    atomic<bool> done(false);
-    vector<unsigned>::iterator pos = parallel_find_async(vct.begin(), vct.end(), match, done);
-    if (pos != vct.end()) {
+    atomic<bool> bDone_a(false);
+    auto const& posFind = parallel_find_async(VCT_NUMBERS.begin(), VCT_NUMBERS.end(), uMatch, bDone_a);
+    if (posFind != VCT_NUMBERS.end()) {
         INFO("find");
     } else {
-        INFO("not find");
+        ERR("not find");
     }
 }
 
 //8.5.3 A parallel implementation of partial_sum
 //Listing 8.11 Calculating partial sums in parallel by dividing the problem
-void parallel_partial_sum_test() {
+void test_parallel_partial_sum() {
     TICK();
-    vector<unsigned> vct = {
+    vector<unsigned> vctInput = {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -318,17 +267,17 @@ void parallel_partial_sum_test() {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     };
-    parallel_partial_sum(vct.begin(), vct.end());
-    for (unsigned long i = 0; i < vct.size(); ++i) {
-        INFO("%d=%d", i, vct[i]);
+    parallel_partial_sum(vctInput.begin(), vctInput.end());
+    for (unsigned long i = 0; i < vctInput.size(); ++i) {
+        INFO("no.%3d : %5d", i + 1, vctInput[i]);
     }
 }
 
 //Listing 8.12 A simple barrier class
 //Listing 8.13 A parallel implementation of partial_sum by pairwise updates
-void parallel_partial_sum_pairwise_test() {
+void test_parallel_partial_sum_pairwise() {
     TICK();
-    vector<unsigned> vct = {
+    vector<unsigned> vctInput = {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -340,9 +289,9 @@ void parallel_partial_sum_pairwise_test() {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     };
-    parallel_partial_sum_pairwise(vct.begin(), vct.end());
-    for (unsigned long i = 0; i < vct.size(); ++i) {
-        INFO("%d=%d", i, vct[i]);
+    parallel_partial_sum_pairwise(vctInput.begin(), vctInput.end());
+    for (unsigned long i = 0; i < vctInput.size(); ++i) {
+        INFO("no.%3d : %5d", i + 1, vctInput[i]);
     }
 }
 
