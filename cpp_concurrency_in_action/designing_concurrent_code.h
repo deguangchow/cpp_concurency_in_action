@@ -28,7 +28,7 @@ struct sorter {
     vector<thread>                                          m_vctThreads;
     unsigned const                                          m_uMaxThreadCount;
     atomic<bool>                                            m_bDone_a;
-    sorter() : m_uMaxThreadCount(thread::hardware_concurrency() - 1), m_bDone_a(false) {
+    sorter() : m_uMaxThreadCount(HARDWARE_CONCURRENCY - 1), m_bDone_a(false) {
         TICK();
         INFO("max thread count is %d.", m_uMaxThreadCount);
     }
@@ -106,8 +106,7 @@ void test_parallel_quick_sort();
 //8.2 Factors affecting the performance of concurrent code
 //8.2.1 How many processors?
 //8.2.2 Data contention and cache ping-pang
-void processing_loop();
-void processing_loop_test();
+void test_processing_loop();
 
 void processing_loop_with_mutex();
 void processing_loop_with_mutex_test();
@@ -161,8 +160,7 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
     }
     unsigned long const min_per_thread = 25;
     unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const hardware_threads = thread::hardware_concurrency();
-    unsigned long const num_threads = min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
     unsigned long const block_size = length / num_threads;
 
     vector<future<T>> futures(num_threads - 1);
@@ -224,8 +222,7 @@ T parallel_accumulate_join(Iterator first, Iterator last, T init) {
     }
     unsigned long const min_per_thread = 25;
     unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const hardware_threads = thread::hardware_concurrency();
-    unsigned long const num_threads = min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
     unsigned long const block_size = length / num_threads;
 
     vector<future<T>> futures(num_threads - 1);
@@ -310,8 +307,7 @@ void parallel_for_each(Iterator first, Iterator last, Func f) {
     }
     unsigned long const min_per_thread = 25;
     unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const hardware_threads = thread::hardware_concurrency();
-    unsigned long const num_threads = min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
     unsigned long const block_size = length / num_threads;
 
     vector<future<void>> futures(num_threads - 1);
@@ -385,8 +381,7 @@ Iterator parallel_find(Iterator first, Iterator last, MatchType match) {
     }
     unsigned long const min_per_thread = 25;
     unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const hardware_threads = thread::hardware_concurrency();
-    unsigned long const num_threads = min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
     unsigned long const block_size = length / num_threads;
 
     promise<Iterator> result;
@@ -477,8 +472,7 @@ void parallel_partial_sum(Iterator first, Iterator last) {
     }
     unsigned long const min_per_thread = 25;
     unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const hardware_threads = thread::hardware_concurrency();
-    unsigned long const num_threads = min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    unsigned long const num_threads = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
     unsigned long const block_size = length / num_threads;
 
     typedef typename Iterator::value_type value_type;

@@ -32,23 +32,23 @@ void test_parallel_quick_sort() {
 void do_something() {
     //TICK();
 }
-atomic<unsigned long> counter(0);
+atomic<unsigned long> g_ulCounter_a(0);
 void processing_loop() {
     TICK();
-    while (counter.fetch_add(1, memory_order::memory_order_relaxed) < 10000000) {
-        INFO("%d", counter.load(memory_order::memory_order_relaxed));
+    while (g_ulCounter_a.fetch_add(1, memory_order::memory_order_relaxed) < 1000) {
+        INFO("counter=%d", g_ulCounter_a.load(memory_order::memory_order_relaxed));
         do_something();
+        yield();
     }
 }
-void processing_loop_test() {
+void test_processing_loop() {
     TICK();
-    unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_pro(THREAD_NUMS);
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i] = thread(&processing_loop);
+    vector<thread> vctThreads(HARDWARE_CONCURRENCY);
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreads[i] = thread(&processing_loop);
     }
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_pro[i].join();
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreads[i].join();
     }
 }
 

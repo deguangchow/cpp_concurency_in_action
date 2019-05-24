@@ -42,9 +42,8 @@ class simple_thread_pool {
 public:
     simple_thread_pool() : m_abDone(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        auto const& THREAD_NUMS = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+            for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
                 m_vctThreads.push_back(thread(&simple_thread_pool::run, this));
             }
         } catch (...) {
@@ -121,9 +120,8 @@ class thread_pool {
 public:
     thread_pool() : m_abDone(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        auto const& THREAD_NUMS = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+            for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
                 m_vctThreads.push_back(thread(&thread_pool::run, this));
             }
         } catch (...) {
@@ -321,9 +319,8 @@ class thread_pool_local {
 public:
     thread_pool_local() : m_bDone_a(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        auto const& THREAD_NUMS = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < THREAD_NUMS; ++i) {
+            for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
                 m_vctThreads.push_back(thread(&thread_pool_local::run, this));
             }
         } catch (...) {
@@ -461,9 +458,8 @@ class thread_pool_steal {
 public:
     thread_pool_steal() : m_bDone_a(false), m_threadJoiner(m_vctThreads) {
         TICK();
-        unsigned const thread_count = thread::hardware_concurrency();
         try {
-            for (unsigned i = 0; i < thread_count; ++i) {
+            for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
                 m_vctStealingQueues.push_back(unique_ptr<work_stealing_queue>(new work_stealing_queue));
                 m_vctThreads.push_back(thread(&thread_pool_steal::run, this, i));
             }
