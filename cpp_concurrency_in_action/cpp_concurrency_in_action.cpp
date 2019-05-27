@@ -125,10 +125,9 @@ int main() {
     lock_free_conc_data::test_lock_free_reclaim_stack();
     lock_free_conc_data::test_lock_free_shared_stack();
     lock_free_conc_data::test_lock_free_split_ref_cnt_stack();
-    lock_free_conc_data::lock_free_memory_split_ref_cnt_stack_test();
-    lock_free_conc_data::lock_free_queue_test();
+    lock_free_conc_data::test_lock_free_memory_split_ref_cnt_stack();
+    lock_free_conc_data::test_lock_free_queue();
 #endif
-    lock_free_conc_data::test_lock_free_split_ref_cnt_stack();
 
 #if 0//chapter8
     design_conc_code::test_parallel_quick_sort();

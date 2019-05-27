@@ -155,43 +155,45 @@ void test_lock_free_split_ref_cnt_stack() {
 
 //7.2.5 Appling the memory model to the lock-free stack
 //Listing 7.12 A lock-free stack with reference counting and relaxed atomic operations
-void lock_free_memory_split_ref_cnt_stack_test() {
+void test_lock_free_memory_split_ref_cnt_stack() {
     TICK();
-    lock_free_memory_split_ref_cnt_stack<unsigned> lfmsrcs;
+    lock_free_memory_split_ref_cnt_stack<unsigned>  lockFreeMemorySplitRefCntStack;
 
-    unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_push(THREAD_NUMS);
-    vector<future<shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        INFO("push(%d)", i + 1);
-        vct_push[i] = thread(&lock_free_memory_split_ref_cnt_stack<unsigned>::push, &lfmsrcs, i + 1);
-        vct_pop_res[i] = async(&lock_free_memory_split_ref_cnt_stack<unsigned>::pop, &lfmsrcs);
+    vector<thread>                                  vctThreadPush(HARDWARE_CONCURRENCY);
+    vector<future<shared_ptr<unsigned>>>            vctFutureResult(HARDWARE_CONCURRENCY);
+
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        DEBUG("push(%d)", i + 1);
+        vctThreadPush[i] = thread(&lock_free_memory_split_ref_cnt_stack<unsigned>::push,
+            &lockFreeMemorySplitRefCntStack, i + 1);
+        vctFutureResult[i] = async(&lock_free_memory_split_ref_cnt_stack<unsigned>::pop,
+            &lockFreeMemorySplitRefCntStack);
     }
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_push[i].join();
-        shared_ptr<unsigned> ptr = vct_pop_res[i].get();
-        INFO("pop()=%d", ptr ? *ptr : -1);
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreadPush[i].join();
+        shared_ptr<unsigned> ptr = vctFutureResult[i].get();
+        INFO("pop()=%d", ptr ? *ptr : 0);
     }
 }
 
 //7.2.6 Writing a thread-safe queue without lock
 //Listing 7.13 A single-producer, single-consumer lock-free queue
-void lock_free_queue_test() {
+void test_lock_free_queue() {
     TICK();
-    lock_free_queue<unsigned> lfq;
+    lock_free_queue<unsigned>               lockFreeQueue;
 
-    unsigned const& THREAD_NUMS = 5;
-    vector<thread> vct_push(THREAD_NUMS);
-    vector<future<shared_ptr<unsigned>>> vct_pop_res(THREAD_NUMS);
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        INFO("push(%d)", i + 1);
-        vct_push[i] = thread(&lock_free_queue<unsigned>::push, &lfq, i + 1);
-        vct_pop_res[i] = async(&lock_free_queue<unsigned>::pop, &lfq);
+    vector<thread>                          vctThreadPush(HARDWARE_CONCURRENCY);
+    vector<future<shared_ptr<unsigned>>>    vctFutureResult(HARDWARE_CONCURRENCY);
+
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        DEBUG("push(%d)", i + 1);
+        vctThreadPush[i] = thread(&lock_free_queue<unsigned>::push, &lockFreeQueue, i + 1);
+        vctFutureResult[i] = async(&lock_free_queue<unsigned>::pop, &lockFreeQueue);
     }
-    for (unsigned i = 0; i < THREAD_NUMS; ++i) {
-        vct_push[i].join();
-        shared_ptr<unsigned> ptr = vct_pop_res[i].get();
-        INFO("pop()=%d", ptr ? *ptr : -1);
+    for (unsigned i = 0; i < HARDWARE_CONCURRENCY; ++i) {
+        vctThreadPush[i].join();
+        shared_ptr<unsigned> ptr = vctFutureResult[i].get();
+        INFO("pop()=%d", ptr ? *ptr : 0);
     }
 }
 

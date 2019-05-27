@@ -350,9 +350,9 @@ private:
         explicit node(T const& data_) : data(make_shared<T>(data_)), intrenal_count(0), next(nullptr) {}
     };
 #if 1
-    atomic<counted_node_ptr*> head;
+    atomic<counted_node_ptr*>   m_pHead_a = nullptr;
 #else
-    atomic<counted_node_ptr> head;
+    atomic<counted_node_ptr>    m_pHead_a;
     void increase_head_count(counted_node_ptr& old_counter) {
         TICK();
         counted_node_ptr new_counter;
@@ -360,7 +360,7 @@ private:
             WARN("increase_head_count() loop");
             new_counter = old_counter;
             ++new_counter.external_count;
-        } while (!head.compare_exchange_strong(old_counter, new_counter,
+        } while (!m_pHead_a.compare_exchange_strong(old_counter, new_counter,
             memory_order_acquire, memory_order_relaxed));
         old_counter.external_count = new_counter.external_count;
     }
@@ -372,55 +372,58 @@ public:
         TICK();
         while (pop()) {
             WARN("~lock_free_memory_split_ref_cnt_stack() loop");
+            yield();
         }
     }
 #if 1
     void push(T const& data) {
         TICK();
-        counted_node_ptr* new_node = new counted_node_ptr();
-        new_node->ptr = new node(data);
-        new_node->external_count = 1;
-        new_node->ptr->next = head.load(memory_order::memory_order_relaxed);
-        while (!head.compare_exchange_weak(new_node->ptr->next, new_node,
+        counted_node_ptr* pNewNode = new counted_node_ptr();
+        pNewNode->ptr = new node(data);
+        pNewNode->external_count = 1;
+        pNewNode->ptr->next = m_pHead_a.load(memory_order::memory_order_relaxed);
+        while (!m_pHead_a.compare_exchange_weak(pNewNode->ptr->next, pNewNode,
             memory_order::memory_order_release, memory_order::memory_order_relaxed)) {
-            WARN("push() loop");
+            WARN("push() loop...");
+            yield();
         }
     }
     shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr* old_head = head.load();
-        while (old_head && !head.compare_exchange_weak(old_head, old_head->ptr->next)) {
-            WARN("pop() loop");
+        counted_node_ptr* pOldHead = m_pHead_a.load();
+        while (pOldHead && !m_pHead_a.compare_exchange_weak(pOldHead, pOldHead->ptr->next)) {
+            WARN("pop() loop...");
+            yield();
         }
-        return old_head ? old_head->ptr->data : nullptr;
+        return pOldHead ? pOldHead->ptr->data : nullptr;
     }
 #else
     void push(T const& data) {
         TICK();
-        counted_node_ptr new_node;
-        new_node.ptr = new node(data);
-        new_node.external_count = 1;
-        new_node.ptr->next = head.load(memory_order_relaxed);
-        while (!head.compare_exchange_weak(new_node.ptr->next, &new_node,
+        counted_node_ptr pNewNode;
+        pNewNode.ptr = new node(data);
+        pNewNode.external_count = 1;
+        pNewNode.ptr->next = m_pHead_a.load(memory_order_relaxed);
+        while (!m_pHead_a.compare_exchange_weak(pNewNode.ptr->next, &pNewNode,
             memory_order_release, memory_order_relaxed)) {
             WARN("push() loop");
         }
     }
     shared_ptr<T> pop() {
         TICK();
-        counted_node_ptr old_head = head.load(memory_order_acq_rel);
+        counted_node_ptr pOldHead = m_pHead_a.load(memory_order_acq_rel);
         for (;;) {
             WARN("pop() loop");
-            increase_head_count(old_head);
-            node* const ptr = old_head.ptr;
+            increase_head_count(pOldHead);
+            node* const ptr = pOldHead.ptr;
             if (!ptr) {
                 WARN("ptr(nullptr)");
                 return shared_ptr<T>();
             }
-            if (head.compare_exchange_strong(old_head, ptr->next, memory_order_relaxed)) {
+            if (m_pHead_a.compare_exchange_strong(pOldHead, ptr->next, memory_order_relaxed)) {
                 shared_ptr<T> res;
                 res.swap(ptr->data);
-                int const count_increase = old_head.external_count - 2;
+                int const count_increase = pOldHead.external_count - 2;
                 if (ptr->intrenal_count.fetch_add(count_increase, memory_order_release) == -count_increase) {
                     delete ptr;
                 }
@@ -433,7 +436,7 @@ public:
     }
 #endif
 };
-void lock_free_memory_split_ref_cnt_stack_test();
+void test_lock_free_memory_split_ref_cnt_stack();
 
 //7.2.6 Writing a thread-safe queue without lock
 //Listing 7.13 A single-producer, single-consumer lock-free queue
@@ -441,56 +444,58 @@ template<typename T>
 class lock_free_queue {
 private:
     struct node {
-        shared_ptr<T> data;
-        node* next;
+        shared_ptr<T>   data;
+        node*           next;
         node() : data(nullptr), next(nullptr) {}
     };
-    atomic<node*> head;
-    atomic<node*> tail;
+    atomic<node*>       m_pHead_a = nullptr;
+    atomic<node*>       m_pTail_a = nullptr;
     node* pop_head() {
         TICK();
-        node* const old_head = head.load();
-        if (old_head == tail.load()) {
+        node* const pOldHead = m_pHead_a.load();
+        if (pOldHead == m_pTail_a.load()) {
             return nullptr;
         }
-        head.store(old_head->next);
-        return old_head;
+        m_pHead_a.store(pOldHead->next);
+        return pOldHead;
     }
 
 public:
-    lock_free_queue() : head(new node), tail(head.load()) {}
+    lock_free_queue() : m_pHead_a(new node), m_pTail_a(m_pHead_a.load()) {}
     lock_free_queue(const lock_free_queue& other) = delete;
     lock_free_queue& operator=(const lock_free_queue& other) = delete;
     ~lock_free_queue() {
         TICK();
-        while (node* const old_haed = head.load()) {
-            head.store(old_haed->next);
-            WARN("~lock_free_queue() loop");
-            delete old_haed;
+        while (node* pOldHead = m_pHead_a.load()) {
+            m_pHead_a.store(pOldHead->next);
+            WARN("~lock_free_queue() loop...");
+            delete pOldHead;
+            pOldHead = nullptr;
+            yield();
         }
     }
     shared_ptr<T> pop() {
         TICK();
-        node* old_head = pop_head();
-        if (!old_head) {
+        node* pOldHead = pop_head();
+        if (!pOldHead) {
             return make_shared<T>();
         }
-        shared_ptr<T> const res(old_head->data);
-        delete old_head;
-        old_head = nullptr;
-        return res;
+        shared_ptr<T> const ptrResult(pOldHead->data);
+        delete pOldHead;
+        pOldHead = nullptr;
+        return ptrResult;
     }
     void push(T new_value) {
         TICK();
-        shared_ptr<T> new_data(make_shared<T>(new_value));
-        node* p = new node();
-        node* const old_tail = tail.load();
-        old_tail->data.swap(new_data);
-        old_tail->next = p;
-        tail.store(p);
+        shared_ptr<T> ptrNewData(make_shared<T>(new_value));
+        node* pNewNode = new node();
+        node* const pOldTail = m_pTail_a.load();
+        pOldTail->data.swap(ptrNewData);
+        pOldTail->next = pNewNode;
+        m_pTail_a.store(pNewNode);
     }
 };
-void lock_free_queue_test();
+void test_lock_free_queue();
 
 //Listing 7.14 A (broken) first attempt at revising push()
 
