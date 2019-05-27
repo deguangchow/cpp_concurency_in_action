@@ -89,7 +89,15 @@ using std::vector;
 using std::list;
 using std::array;
 using std::deque;
+using std::list;
+using std::stack;
 
+using std::pair;
+using std::make_pair;
+
+using std::hash;
+
+using std::exception;
 using std::current_exception;
 
 using std::cin;

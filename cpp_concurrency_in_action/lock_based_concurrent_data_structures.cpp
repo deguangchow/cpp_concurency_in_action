@@ -14,31 +14,33 @@ namespace lock_based_conc_data {
 //6.2 Lock-based concurrent data structures
 //6.2.1 A thread-safe stack using locks
 //Listing 6.1 A class definition for a thread-safe stack
-thread_safe_stack<int> st1;
+thread_safe_stack<int>          g_threadSafeStack;
 void lock_thread_safe_stack_write() {
     TICK();
-    st1.push(1);
-    st1.push(2);
-    st1.push(3);
+    g_threadSafeStack.push(1);
+    g_threadSafeStack.push(2);
+    g_threadSafeStack.push(3);
 }
 void lock_thread_safe_stack_read() {
     TICK();
-    std::shared_ptr<int> ptr1 = st1.pop();
-    std::shared_ptr<int> ptr2 = st1.pop();
-    std::shared_ptr<int> ptr3 = st1.pop();
+    shared_ptr<int> ptr1 = g_threadSafeStack.pop();
+    shared_ptr<int> ptr2 = g_threadSafeStack.pop();
+    shared_ptr<int> ptr3 = g_threadSafeStack.pop();
     INFO("ptr1=%d", *ptr1);
     INFO("ptr2=%d", *ptr2);
     INFO("ptr3=%d", *ptr3);
 }
-void lock_thread_safe_stack_test() {
+void test_lock_based_thread_safe_stack() {
     TICK();
     try {
-        std::thread t1(lock_thread_safe_stack_write);
-        std::thread t2(lock_thread_safe_stack_write);
-        std::thread t3(lock_thread_safe_stack_write);
-        std::thread t4(lock_thread_safe_stack_read);
-        std::thread t5(lock_thread_safe_stack_read);
-        std::thread t6(lock_thread_safe_stack_read);
+        thread t1(lock_thread_safe_stack_write);
+        thread t2(lock_thread_safe_stack_write);
+        thread t3(lock_thread_safe_stack_write);
+
+        thread t4(lock_thread_safe_stack_read);
+        thread t5(lock_thread_safe_stack_read);
+        thread t6(lock_thread_safe_stack_read);
+
         t1.join();
         t2.join();
         t3.join();
@@ -54,45 +56,50 @@ void lock_thread_safe_stack_test() {
 
 //6.2.2 A thread-safe queue using locks and condition variables
 //Listing 6.2 The full class definition for a thread-safe queue using condition variables
-threadsafe_queue<unsigned> tsq;
+threadsafe_queue<unsigned>          g_threadSafeQueue;
 void threadsafe_queue_write() {
     TICK();
-    tsq.push(1);
-    tsq.push(2);
-    tsq.push(3);
+    g_threadSafeQueue.push(1);
+    g_threadSafeQueue.push(2);
+    g_threadSafeQueue.push(3);
 #if 0
-    tsq.push(4);
+    g_threadSafeQueue.push(4);
 #endif
 }
 void threadsafe_queue_read() {
     TICK();
-    std::shared_ptr<unsigned> ptr1 = tsq.wait_and_pop();
+    shared_ptr<unsigned> ptr1 = g_threadSafeQueue.wait_and_pop();
     if (nullptr == ptr1) {
-        INFO("wait_and_pop()=nullptr");
+        WARN("wait_and_pop()=nullptr");
     } else {
         INFO("wait_and_pop()=%d", *ptr1);
     }
-    std::shared_ptr<unsigned> ptr2 = tsq.try_pop();
+
+    shared_ptr<unsigned> ptr2 = g_threadSafeQueue.try_pop();
     if (nullptr == ptr2) {
-        INFO("try_pop()=nullptr");
+        WARN("try_pop()=nullptr");
     } else {
         INFO("try_pop()=%d", *ptr2);
     }
+
     unsigned u3 = -1;
-    tsq.wait_and_pop(u3);
+    g_threadSafeQueue.wait_and_pop(u3);
     INFO("wait_and_pop(%d)", u3);
+
     unsigned u4 = -1;
-    tsq.try_pop(u4);
+    g_threadSafeQueue.try_pop(u4);
     INFO("try_pop(%d)", u4);
 }
-void treadsafe_queue_test() {
+void test_threadsafe_queue() {
     TICK();
-    std::thread t1(threadsafe_queue_write);
-    std::thread t2(threadsafe_queue_write);
-    std::thread t3(threadsafe_queue_write);
-    std::thread t4(threadsafe_queue_read);
-    std::thread t5(threadsafe_queue_read);
-    std::thread t6(threadsafe_queue_read);
+    thread t1(threadsafe_queue_write);
+    thread t2(threadsafe_queue_write);
+    thread t3(threadsafe_queue_write);
+
+    thread t4(threadsafe_queue_read);
+    thread t5(threadsafe_queue_read);
+    thread t6(threadsafe_queue_read);
+
     t1.join();
     t2.join();
     t3.join();
@@ -101,45 +108,52 @@ void treadsafe_queue_test() {
     t6.join();
 }
 
-//Listing 6.3 A thread-safe queue holding std::shared_ptr<> instances
-threadsafe_queue_shared_ptr<unsigned> tsqsp;
+//Listing 6.3 A thread-safe queue holding shared_ptr<> instances
+threadsafe_queue_shared_ptr<unsigned> g_threadSafeQueueSharedPtr;
 void threadsafe_queue_shared_ptr_write() {
     TICK();
-    tsqsp.push(1);
-    tsqsp.push(2);
-    tsqsp.push(3);
-    tsqsp.push(4);
+    g_threadSafeQueueSharedPtr.push(1);
+    g_threadSafeQueueSharedPtr.push(2);
+    g_threadSafeQueueSharedPtr.push(3);
+#if 0
+    g_threadSafeQueueSharedPtr.push(4);
+#endif
 }
 void threadsafe_queue_shared_ptr_read() {
     TICK();
     unsigned u1 = -1;
-    tsqsp.wait_and_pop(u1);
+    g_threadSafeQueueSharedPtr.wait_and_pop(u1);
     INFO("wait_and_pop(%d)", u1);
+
     unsigned u2 = -1;
-    tsqsp.try_pop(u2);
+    g_threadSafeQueueSharedPtr.try_pop(u2);
     INFO("try_pop(%d)", u2);
-    std::shared_ptr<unsigned> ptr3 = tsqsp.wait_and_pop();
+
+    shared_ptr<unsigned> ptr3 = g_threadSafeQueueSharedPtr.wait_and_pop();
     if (nullptr == ptr3) {
-        INFO("wait_and_pop()=nullptr");
+        WARN("wait_and_pop()=nullptr");
     } else {
         INFO("wait_and_pop()=%d", *ptr3);
     }
-    std::shared_ptr<unsigned> ptr4 = tsqsp.try_pop();
+
+    shared_ptr<unsigned> ptr4 = g_threadSafeQueueSharedPtr.try_pop();
     if (nullptr == ptr4) {
-        INFO("try_pop()=nullptr");
+        WARN("try_pop()=nullptr");
     } else {
         INFO("try_pop()=%d", *ptr4);
     }
 }
 
-void threadsafe_queue_shared_ptr_test() {
+void test_threadsafe_queue_shared_ptr() {
     TICK();
-    std::thread t1(threadsafe_queue_shared_ptr_write);
-    std::thread t2(threadsafe_queue_shared_ptr_write);
-    std::thread t3(threadsafe_queue_shared_ptr_write);
-    std::thread t4(threadsafe_queue_shared_ptr_read);
-    std::thread t5(threadsafe_queue_shared_ptr_read);
-    std::thread t6(threadsafe_queue_shared_ptr_read);
+    thread t1(threadsafe_queue_shared_ptr_write);
+    thread t2(threadsafe_queue_shared_ptr_write);
+    thread t3(threadsafe_queue_shared_ptr_write);
+
+    thread t4(threadsafe_queue_shared_ptr_read);
+    thread t5(threadsafe_queue_shared_ptr_read);
+    thread t6(threadsafe_queue_shared_ptr_read);
+
     t1.join();
     t2.join();
     t3.join();
@@ -149,18 +163,21 @@ void threadsafe_queue_shared_ptr_test() {
 }
 
 //Listing 6.4 A simple single-threaded queue implementation
-void queue_test() {
+void test_queue() {
     TICK();
     queue<unsigned> q;
+
     q.push(1);
     q.push(2);
     q.push(3);
     q.push(4);
-    std::shared_ptr<unsigned> ptr1 = q.try_pop();
-    std::shared_ptr<unsigned> ptr2 = q.try_pop();
-    std::shared_ptr<unsigned> ptr3 = q.try_pop();
-    std::shared_ptr<unsigned> ptr4 = q.try_pop();
-    std::shared_ptr<unsigned> ptr5 = q.try_pop();
+
+    shared_ptr<unsigned> ptr1 = q.try_pop();
+    shared_ptr<unsigned> ptr2 = q.try_pop();
+    shared_ptr<unsigned> ptr3 = q.try_pop();
+    shared_ptr<unsigned> ptr4 = q.try_pop();
+    shared_ptr<unsigned> ptr5 = q.try_pop();
+
     INFO("try_pop()=%d", *ptr1);
     INFO("try_pop()=%d", *ptr2);
     INFO("try_pop()=%d", *ptr3);
@@ -169,33 +186,35 @@ void queue_test() {
 }
 
 //Listing 6.5 A simple queue with a dummy node
-dummy_queue<unsigned> dq;
+dummy_queue<unsigned>           g_dummyQueue;
 void dummy_queue_write() {
     TICK();
-    dq.push(1);
-    dq.push(2);
-    dq.push(3);
-    dq.push(4);
+    g_dummyQueue.push(1);
+    g_dummyQueue.push(2);
+    g_dummyQueue.push(3);
+    g_dummyQueue.push(4);
 }
 void dummy_queue_read() {
     TICK();
-    std::shared_ptr<unsigned> ptr1 = dq.try_pop();
-    std::shared_ptr<unsigned> ptr2 = dq.try_pop();
-    std::shared_ptr<unsigned> ptr3 = dq.try_pop();
-    std::shared_ptr<unsigned> ptr4 = dq.try_pop();
+    shared_ptr<unsigned> ptr1 = g_dummyQueue.try_pop();
+    shared_ptr<unsigned> ptr2 = g_dummyQueue.try_pop();
+    shared_ptr<unsigned> ptr3 = g_dummyQueue.try_pop();
+    shared_ptr<unsigned> ptr4 = g_dummyQueue.try_pop();
     INFO("try_pop()=%d", *ptr1);
     INFO("try_pop()=%d", *ptr2);
     INFO("try_pop()=%d", *ptr3);
     INFO("try_pop()=%d", *ptr4);
 }
-void dummy_queue_test() {
+void test_dummy_queue() {
     TICK();
-    std::thread t1(dummy_queue_write);
-    std::thread t2(dummy_queue_write);
-    std::thread t3(dummy_queue_write);
-    std::thread t4(dummy_queue_read);
-    std::thread t5(dummy_queue_read);
-    std::thread t6(dummy_queue_read);
+    thread t1(dummy_queue_write);
+    thread t2(dummy_queue_write);
+    thread t3(dummy_queue_write);
+
+    thread t4(dummy_queue_read);
+    thread t5(dummy_queue_read);
+    thread t6(dummy_queue_read);
+
     t1.join();
     t2.join();
     t3.join();
@@ -205,33 +224,35 @@ void dummy_queue_test() {
 }
 
 //Listing 6.6 A thread-safe queue with fine-grained locking
-threadsafe_queue_fine_grained<unsigned> tsqfg;
+threadsafe_queue_fine_grained<unsigned> g_threadSafeQueueFineGrainedWrite;
 void threadsafe_queue_fine_grained_write() {
     TICK();
-    tsqfg.push(1);
-    tsqfg.push(2);
-    tsqfg.push(3);
-    tsqfg.push(4);
+    g_threadSafeQueueFineGrainedWrite.push(1);
+    g_threadSafeQueueFineGrainedWrite.push(2);
+    g_threadSafeQueueFineGrainedWrite.push(3);
+    g_threadSafeQueueFineGrainedWrite.push(4);
 }
 void threadsafe_queue_fine_grained_read() {
     TICK();
-    std::shared_ptr<unsigned> ptr1 = tsqfg.try_pop();
-    std::shared_ptr<unsigned> ptr2 = tsqfg.try_pop();
-    std::shared_ptr<unsigned> ptr3 = tsqfg.try_pop();
-    std::shared_ptr<unsigned> ptr4 = tsqfg.try_pop();
+    shared_ptr<unsigned> ptr1 = g_threadSafeQueueFineGrainedWrite.try_pop();
+    shared_ptr<unsigned> ptr2 = g_threadSafeQueueFineGrainedWrite.try_pop();
+    shared_ptr<unsigned> ptr3 = g_threadSafeQueueFineGrainedWrite.try_pop();
+    shared_ptr<unsigned> ptr4 = g_threadSafeQueueFineGrainedWrite.try_pop();
     INFO("try_pop()=%d", ptr1 ? *ptr1 : -1);//-1 won`t be printed as the function 'try_pop' would return 0 if empty
     INFO("try_pop()=%d", ptr2 ? *ptr2 : -1);
     INFO("try_pop()=%d", ptr3 ? *ptr3 : -1);
     INFO("try_pop()=%d", ptr4 ? *ptr4 : -1);
 }
-void threadsafe_queue_fine_grained_test() {
+void test_threadsafe_queue_fine_grained() {
     TICK();
-    std::thread t1(threadsafe_queue_fine_grained_write);
-    std::thread t2(threadsafe_queue_fine_grained_write);
-    std::thread t3(threadsafe_queue_fine_grained_write);
-    std::thread t4(threadsafe_queue_fine_grained_read);
-    std::thread t5(threadsafe_queue_fine_grained_read);
-    std::thread t6(threadsafe_queue_fine_grained_read);
+    thread t1(threadsafe_queue_fine_grained_write);
+    thread t2(threadsafe_queue_fine_grained_write);
+    thread t3(threadsafe_queue_fine_grained_write);
+
+    thread t4(threadsafe_queue_fine_grained_read);
+    thread t5(threadsafe_queue_fine_grained_read);
+    thread t6(threadsafe_queue_fine_grained_read);
+
     t1.join();
     t2.join();
     t3.join();
@@ -241,65 +262,65 @@ void threadsafe_queue_fine_grained_test() {
 }
 
 //Listing 6.7 A thread-safe queue with locking and waiting: internals and interface
-threadsafe_waiting_queue<unsigned> tswq;
+threadsafe_waiting_queue<unsigned> g_threadSafeWaitingQueue;
 void threadsafe_waiting_queue_write() {
     TICK();
-    tswq.push(1);
-    tswq.push(2);
-    tswq.push(3);
-    tswq.push(4);
+    g_threadSafeWaitingQueue.push(1);
+    g_threadSafeWaitingQueue.push(2);
+    g_threadSafeWaitingQueue.push(3);
+    g_threadSafeWaitingQueue.push(4);
 }
 void threadsafe_waiting_queue_read() {
     TICK();
 #if 0//if empty print 0
-    std::shared_ptr<unsigned> ptr1 = tswq.try_pop();
+    shared_ptr<unsigned> ptr1 = g_threadSafeWaitingQueue.try_pop();
     INFO("try_pop()=%d", *ptr1);
 
-    std::shared_ptr<unsigned> ptr2 = tswq.try_pop();
+    shared_ptr<unsigned> ptr2 = g_threadSafeWaitingQueue.try_pop();
     INFO("try_pop()=%d", *ptr2);
 
     unsigned u3 = 0;
-    tswq.try_pop(u3);
+    g_threadSafeWaitingQueue.try_pop(u3);
     INFO("try_pop(%d)", u3);
 
     unsigned u4 = 0;
-    tswq.try_pop(u4);
+    g_threadSafeWaitingQueue.try_pop(u4);
     INFO("try_pop(%d)", u4);
 #else//if empty wait cv
-    std::shared_ptr<unsigned> ptr1 = tswq.wait_and_pop();
+    shared_ptr<unsigned> ptr1 = g_threadSafeWaitingQueue.wait_and_pop();
     INFO("wait_and_pop()=%d", *ptr1);
 
-    std::shared_ptr<unsigned> ptr2 = tswq.wait_and_pop();
+    shared_ptr<unsigned> ptr2 = g_threadSafeWaitingQueue.wait_and_pop();
     INFO("wait_and_pop()=%d", *ptr2);
 
     unsigned u3 = 0;
-    tswq.wait_and_pop(u3);
+    g_threadSafeWaitingQueue.wait_and_pop(u3);
     INFO("try_pop(%d)", u3);
 
     unsigned u4 = 0;
-    tswq.wait_and_pop(u4);
+    g_threadSafeWaitingQueue.wait_and_pop(u4);
     INFO("try_pop(%d)", u4);
 #endif
 }
 void threadsafe_waiting_queue_loop() {
     TICK();
-    tswq.loop();
+    g_threadSafeWaitingQueue.loop();
 }
-void threadsafe_waiting_queue_test() {
+void test_threadsafe_waiting_queue() {
     TICK();
-    //std::thread t(threadsafe_waiting_queue_loop);
+    thread t(threadsafe_waiting_queue_loop);
 
-    std::thread t1(threadsafe_waiting_queue_write);
-    std::thread t2(threadsafe_waiting_queue_write);
-    std::thread t3(threadsafe_waiting_queue_write);
-    std::thread t4(threadsafe_waiting_queue_write);
+    thread t1(threadsafe_waiting_queue_write);
+    thread t2(threadsafe_waiting_queue_write);
+    thread t3(threadsafe_waiting_queue_write);
+    thread t4(threadsafe_waiting_queue_write);
 
-    std::thread t5(threadsafe_waiting_queue_read);
-    std::thread t6(threadsafe_waiting_queue_read);
-    std::thread t7(threadsafe_waiting_queue_read);
-    std::thread t8(threadsafe_waiting_queue_read);
+    thread t5(threadsafe_waiting_queue_read);
+    thread t6(threadsafe_waiting_queue_read);
+    thread t7(threadsafe_waiting_queue_read);
+    thread t8(threadsafe_waiting_queue_read);
 
-    //t.join();
+    t.join();
 
     t1.join();
     t2.join();
@@ -315,38 +336,38 @@ void threadsafe_waiting_queue_test() {
 //6.3 Designing more complex lock-based data structures
 //6.3.1 Writing a thread-safe lookup table using locks
 //Listing 6.11 A thread-safe lookup table
-typedef threadsafe_lookup_table<int, int> MAP_I_I;
-MAP_I_I mapII;
-const unsigned &KEY_NUMS = 5;
+typedef threadsafe_lookup_table<int, int> MAP_KEY_VALUE;
+MAP_KEY_VALUE                   g_mapKeyValue;
+const unsigned                  &KEY_NUMS = 5;
 void threadsafe_lookup_table_add() {
     TICK();
     for (unsigned i = 1; i < KEY_NUMS; ++i) {
-        INFO("%s(%d,%d)", mapII.add_or_update_mapping(i, i * HUNDRED) ? "add" : "update", i, i * HUNDRED);
+        DEBUG("%s(%d,%d)", g_mapKeyValue.insert(i, i * HUNDRED) ? "add" : "update", i, i * HUNDRED);
     }
 }
-void threadsafe_lookup_table_remove() {
+void threadsafe_lookup_table_remove_all() {
     TICK();
     for (unsigned i = 1; i < KEY_NUMS; ++i) {
-        INFO("remove(%d)=%s", i, mapII.remove_mapping(i) ? "true" : "false");
+        WARN("remove(%d)=%s", i, g_mapKeyValue.remove(i) ? "true" : "false");
     }
 }
 void threadsafe_lookup_table_read() {
     TICK();
     for (unsigned i = 1; i < KEY_NUMS; ++i) {
-        INFO("read(%d)=%d", i, mapII.value_for(i));
+        INFO("read(%d)=%d", i, g_mapKeyValue.get(i));
     }
 }
-void threadsafe_lookup_table_test() {
+void test_threadsafe_lookup_table() {
     TICK();
-    std::thread t1(threadsafe_lookup_table_add);
-    std::thread t2(threadsafe_lookup_table_add);
-    std::thread t3(threadsafe_lookup_table_add);
-    std::thread t4(threadsafe_lookup_table_add);
-    std::thread t5(threadsafe_lookup_table_read);
-    std::thread t6(threadsafe_lookup_table_read);
-    std::thread t7(threadsafe_lookup_table_read);
-    std::thread t8(threadsafe_lookup_table_read);
-    std::thread t9(threadsafe_lookup_table_remove);
+    thread t1(threadsafe_lookup_table_add);
+    thread t2(threadsafe_lookup_table_add);
+    thread t3(threadsafe_lookup_table_add);
+    thread t4(threadsafe_lookup_table_add);
+
+    thread t5(threadsafe_lookup_table_read);
+    thread t6(threadsafe_lookup_table_read);
+    thread t7(threadsafe_lookup_table_read);
+    thread t8(threadsafe_lookup_table_read);
 
     t1.join();
     t2.join();
@@ -356,74 +377,78 @@ void threadsafe_lookup_table_test() {
     t6.join();
     t7.join();
     t8.join();
-    t9.join();
 
-#if 0//exist some error in the function 'get_map'
-    mapII.get_map();
-#endif
+    auto const& mapRes = g_mapKeyValue.get_map();
+    for (auto& pos = mapRes.begin(); pos != mapRes.end(); ++pos) {
+        PRINT("[%d, %d], ", pos->first, pos->second);
+    }
+
+    thread t9(threadsafe_lookup_table_remove_all);
+    t9.join();
 }
 
 //6.3.2 Writing a thread-safe list using locks
 //Listing 6.13 A thread-safe list with iteration support
-threadsafe_list<unsigned const> tsl;
+threadsafe_list<unsigned const>     g_threadSafeList;
 void threadsafe_list_write(unsigned const& val) {
     TICK();
     for (unsigned i = 1; i < 5; ++i) {
-        INFO("push front %d", i*val);
-        tsl.push_front(i*val);
+        DEBUG("push front(%d).", i*val);
+        g_threadSafeList.push_front(i*val);
     }
 }
 
 void threadsafe_list_remove() {
     TICK();
     unsigned count = 0;
-    tsl.remove_if([&count](unsigned const& item) {
+    g_threadSafeList.remove_if([&count](unsigned const& item) {
         bool ret = item % 2 == 0;
         if (ret) {
-            INFO("remove %d", item);
+            INFO("remove(%d).", item);
             ++count;
         }
         return ret;
      });
-    INFO("remove total=%d", count);
+    INFO("remove total is %d.", count);
 }
 void threadsafe_list_read() {
     TICK();
     unsigned count = 0;
-    tsl.for_each([&count](unsigned const& item) {INFO("read %d", item); ++count; });
-    INFO("read total=%d", count);
+    g_threadSafeList.for_each([&count](unsigned const& item) {INFO("read(%d).", item); ++count; });
+    INFO("read total is %d.", count);
 }
-void threadsafe_list_test() {
+void test_threadsafe_list() {
     TICK();
-    std::thread t1(threadsafe_list_write, ONE);
-    std::thread t2(threadsafe_list_write, TEN);
-    std::thread t3(threadsafe_list_write, HUNDRED);
-    std::thread t4(threadsafe_list_write, THOUSAND);
+    thread t1(threadsafe_list_write, ONE);
+    thread t2(threadsafe_list_write, TEN);
+    thread t3(threadsafe_list_write, HUNDRED);
+    thread t4(threadsafe_list_write, THOUSAND);
 #if 1
-    typedef std::function<bool(unsigned const&)> Func;
-    std::thread remove(&threadsafe_list<unsigned const>::remove_if<Func>, &tsl, [](unsigned const& item) {
+    typedef function<bool(unsigned const&)> Func;
+    thread remove(&threadsafe_list<unsigned const>::remove_if<Func>, &g_threadSafeList, [](unsigned const& item) {
         bool ret = item % 2 == 0;
         if (ret) {
-            INFO("remove %d", item);
+            INFO("remove(%d).", item);
         }
         return ret;
     });
 #else
-    std::thread remove(threadsafe_list_remove);
+    thread remove(threadsafe_list_remove);
 #endif
 #if 0
-    typedef std::function<void(unsigned const&)> Func;
-    std::thread read(&threadsafe_list<unsigned const>::for_each<Func>,
+    typedef function<void(unsigned const&)> Func;
+    thread read(&threadsafe_list<unsigned const>::for_each<Func>,
         &tsl, [](unsigned const& item) {INFO("%d", item); });
 #else
-    std::thread read(threadsafe_list_read);
+    thread read(threadsafe_list_read);
 #endif
-    typedef std::function<bool(unsigned const&)> Func;
-    std::thread find(&threadsafe_list<unsigned const>::find_first_if<Func>, &tsl, [](unsigned const& item) {
-        if (bool ret = item > 0) {
-            INFO("find %d", item);
+    typedef function<bool(unsigned const&)> Func;
+    thread find(&threadsafe_list<unsigned const>::find_first_if<Func>, &g_threadSafeList, [](unsigned const& item) {
+        if (bool ret = item > 10000) {
+            INFO("find(%d).", item);
             return ret;
         }
+        WARN("not find.");
         return false;
     });
     t1.join();

@@ -18,7 +18,7 @@ namespace lock_based_conc_data {
 //6.2 Lock-based concurrent data structures
 //6.2.1 A thread-safe stack using locks
 //Listing 6.1 A class definition for a thread-safe stack
-struct empty_stack : std::exception {
+struct empty_stack : exception {
     const char* what() const throw() {
         return "empty_stack";
     }
@@ -26,179 +26,202 @@ struct empty_stack : std::exception {
 template<typename T>
 class thread_safe_stack {
 private:
-    std::stack<T> data;
-    mutable std::mutex m;
+    stack<T>            m_stackData;
+    mutable mutex       m_mutex;
 
 public:
     thread_safe_stack() {}
-    thread_safe_stack(const thread_safe_stack &other) : m(std::mutex()) {
+    thread_safe_stack(const thread_safe_stack &other) : m_mutex(mutex()) {
         //TICK();
-        std::lock_guard<std::mutex> lock(other.m);
-        data = other.data;
+        lock_guard<mutex> lock(other.m_mutex);
+        m_stackData = other.m_stackData;
     }
     thread_safe_stack& operator=(const thread_safe_stack &) = delete;
     void push(T new_value) {
         //TICK();
-        std::lock_guard<std::mutex> lock(m);
-        data.push(std::move(new_value));
+        lock_guard<mutex> lock(m_mutex);
+        m_stackData.push(move(new_value));
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         //TICK();
-        std::lock_guard<std::mutex> lock(m);
-        if (data.empty()) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_stackData.empty()) {
 #if 0
             throw empty_stack();
 #else
             return nullptr;
 #endif
         }
-        std::shared_ptr<T> const res(std::make_shared<T>(std::move(data.top())));
-        data.pop();
-        return res;
+        shared_ptr<T> const ptrResult(make_shared<T>(move(m_stackData.top())));
+        m_stackData.pop();
+        return ptrResult;
     }
     void pop(T &value) {
         //TICK();
-        std::lock_guard<std::mutex> lock(m);
-        if (data.empty()) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_stackData.empty()) {
             throw empty_stack();
         }
-        value = std::move(data.top());
-        data.pop();
+        value = move(m_stackData.top());
+        m_stackData.pop();
     }
     bool empty() const {
         //TICK();
-        std::lock_guard<std::mutex> lock(m);
-        return data.empty();
+        lock_guard<mutex> lock(m_mutex);
+        return m_stackData.empty();
     }
 };
-void lock_thread_safe_stack_write();
-void lock_thread_safe_stack_read();
-void lock_thread_safe_stack_test();
+void test_lock_based_thread_safe_stack();
 
 //6.2.2 A thread-safe queue using locks and condition variables
 //Listing 6.2 The full class definition for a thread-safe queue using condition variables
 template<typename T>
 class threadsafe_queue {
 private:
-    mutable std::mutex mut;
-    std::queue<T> data_queue;
-    std::condition_variable data_cond;
+    mutable mutex       m_mutex;
+    std::queue<T>       m_queueData;
+    condition_variable  m_cvData;
 
 public:
     threadsafe_queue() {}
     void push(T new_value) {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        data_queue.push(std::move(new_value));
-        data_cond.notify_one();
+        lock_guard<mutex> lock(m_mutex);
+        m_queueData.push(move(new_value));
+        m_cvData.notify_one();
     }
     void wait_and_pop(T &value) {
         //TICK();
-        std::unique_lock<std::mutex> lock(mut);
-        data_cond.wait(lock, [this] {return !data_queue.empty(); });
-        value = std::move(data_queue.front());
-        data_queue.pop();
+        unique_lock<mutex> lock(m_mutex);
+#if 0
+        m_cvData.wait(lock, [this] {return !m_queueData.empty(); });
+#else
+        if (!m_cvData.wait_for(lock, milliseconds(10), [this] {return !m_queueData.empty(); })) {
+            WARN("void wait_and_pop(T&), wait_for=false");
+            return;
+        }
+#endif
+        value = move(m_queueData.front());
+        m_queueData.pop();
     }
-    std::shared_ptr<T> wait_and_pop() {
+    shared_ptr<T> wait_and_pop() {
         //TICK();
-        std::unique_lock<std::mutex> lock(mut);
-        data_cond.wait(lock, [this] {return !data_queue.empty(); });
-        std::shared_ptr<T> res(std::make_shared<T>(std::move(data_queue.front())));
-        data_queue.pop();
-        return res;
+        unique_lock<mutex> lock(m_mutex);
+#if 0
+        m_cvData.wait(lock, [this] {return !m_queueData.empty(); });
+#else
+        if (!m_cvData.wait_for(lock, milliseconds(10), [this] {return !m_queueData.empty(); })) {
+            WARN("shared_ptr<T> wait_and_pop(), wait_for=false");
+            return nullptr;
+        }
+#endif
+        shared_ptr<T> ptrRes(make_shared<T>(move(m_queueData.front())));
+        m_queueData.pop();
+        return ptrRes;
     }
     bool try_pop(T &value) {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        if (data_queue.empty()) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_queueData.empty()) {
             return false;
         }
-        INFO("pool task");
-        value = std::move(data_queue.front());
-        data_queue.pop();
+        //INFO("pool task");
+        value = move(m_queueData.front());
+        m_queueData.pop();
         return true;
     }
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        if (data_queue.empty()) {
-            return std::shared_ptr<T>();
+        lock_guard<mutex> lock(m_mutex);
+        if (m_queueData.empty()) {
+            return shared_ptr<T>();
         }
-        std::shared_ptr<T> res(std::make_shared<T>(std::move(data_queue.front())));
-        data_queue.pop();
-        return res;
+        shared_ptr<T> ptrRes(make_shared<T>(move(m_queueData.front())));
+        m_queueData.pop();
+        return ptrRes;
     }
     bool empty() const {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        return data_queue.empty();
+        lock_guard<mutex> lock(m_mutex);
+        return m_queueData.empty();
     }
 };
-void threadsafe_queue_write();
-void threadsafe_queue_read();
-void treadsafe_queue_test();
 
-//Listing 6.3 A thread-safe queue holding std::shared_ptr<> instances
+void test_threadsafe_queue();
+
+//Listing 6.3 A thread-safe queue holding shared_ptr<> instances
 template<typename T>
 class threadsafe_queue_shared_ptr {
 private:
-    mutable std::mutex mut;
-    std::queue<std::shared_ptr<T>> data_queue;
-    std::condition_variable data_cond;
+    mutable mutex               m_mutex;
+    std::queue<shared_ptr<T>>   m_queueData;
+    condition_variable          m_cvData;
 
 public:
     threadsafe_queue_shared_ptr() {}
     void wait_and_pop(T &value) {
         //TICK();
-        std::unique_lock<std::mutex> lock(mut);
-        data_cond.wait(lock, [this] {return !data_queue.empty(); });
-        value = std::move(*data_queue.front());
-        data_queue.pop();
+        unique_lock<mutex> lock(m_mutex);
+#if 0
+        m_cvData.wait(lock, [this] { return !m_queueData.empty(); });
+#else
+        if (!m_cvData.wait_for(lock, milliseconds(10), [this] {return !m_queueData.empty(); })) {
+            WARN("void wait_and_pop(T&), wait_for()=false");
+            return;
+        }
+#endif
+        value = move(*m_queueData.front());
+        m_queueData.pop();
     }
     bool try_pop(T &value) {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        if (data_queue.empty()) {
+        lock_guard<mutex> lock(m_mutex);
+        if (m_queueData.empty()) {
             return false;
         }
-        value = std::move(*data_queue.front());
-        data_queue.pop();
+        value = move(*m_queueData.front());
+        m_queueData.pop();
         return true;
     }
-    std::shared_ptr<T> wait_and_pop() {
+    shared_ptr<T> wait_and_pop() {
         //TICK();
-        std::unique_lock<std::mutex> lock(mut);
-        data_cond.wait(lock, [this] {return !data_queue.empty(); });
-        std::shared_ptr<T> res = std::move(data_queue.front());
-        data_queue.pop();
-        return res;
-    }
-    std::shared_ptr<T> try_pop() {
-        //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        if (data_queue.empty()) {
-            return std::shared_ptr<T>();
+        unique_lock<mutex> lock(m_mutex);
+#if 0
+        m_cvData.wait(lock, [this] {return !m_queueData.empty(); });
+#else
+        if (!m_cvData.wait_for(lock, milliseconds(10), [this] {return !m_queueData.empty(); })) {
+            WARN("shared_ptr<T> wait_and_pop(), wait_for()=false");
+            return nullptr;
         }
-        std::shared_ptr<T> res = std::move(data_queue.front());
-        data_queue.pop();
-        return res;
+#endif
+        shared_ptr<T> ptrRes = move(m_queueData.front());
+        m_queueData.pop();
+        return ptrRes;
+    }
+    shared_ptr<T> try_pop() {
+        //TICK();
+        lock_guard<mutex> lock(m_mutex);
+        if (m_queueData.empty()) {
+            return shared_ptr<T>();
+        }
+        shared_ptr<T> ptrRes = move(m_queueData.front());
+        m_queueData.pop();
+        return ptrRes;
     }
     void push(T const new_value) {
         //TICK();
-        std::shared_ptr<T> data(std::make_shared<T>(std::move(new_value)));
-        std::lock_guard<std::mutex> lock(mut);
-        data_queue.push(data);
-        data_cond.notify_one();
+        shared_ptr<T> ptrNewData(make_shared<T>(move(new_value)));
+        lock_guard<mutex> lock(m_mutex);
+        m_queueData.push(ptrNewData);
+        m_cvData.notify_one();
     }
     bool empty() const {
         //TICK();
-        std::lock_guard<std::mutex> lock(mut);
-        return data_queue.empty();
+        lock_guard<mutex> lock(m_mutex);
+        return m_queueData.empty();
     }
 };
-void threadsafe_queue_shared_ptr_write();
-void threadsafe_queue_shared_ptr_read();
-void threadsafe_queue_shared_ptr_test();
+void test_threadsafe_queue_shared_ptr();
 
 //6.2.3 A thread-safe queue using fine-grained locks and condition variables
 //Listing 6.4 A simple single-threaded queue implementation
@@ -206,427 +229,425 @@ template<typename T>
 class queue {
 private:
     struct node {
-        T data;
-        std::unique_ptr<node> next;
-        explicit node(T data_) : data(std::move(data_)) {}
+        T                   data;
+        unique_ptr<node>    next;
+        explicit node(T data_) : data(move(data_)) {}
     };
-    std::unique_ptr<node> head;
-    node *tail;
+    unique_ptr<node>        m_ptrHead;
+    node*                   m_pTail;
 
 public:
-    queue() : tail(nullptr) {}
+    queue() : m_ptrHead(nullptr), m_pTail(nullptr) {}
     queue(queue const &other) = delete;
     queue& operator=(queue const &other) = delete;
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         TICK();
-        if (!head) {
-            return std::make_shared<T>();
+        if (!m_ptrHead) {
+            return make_shared<T>();
         }
-        std::shared_ptr<T> const res(std::make_shared<T>(std::move(head->data)));
-        std::unique_ptr<node> const old_head = std::move(head);
-        head = std::move(old_head->next);
-        return res;
+        shared_ptr<T> const ptrRes(make_shared<T>(move(m_ptrHead->data)));
+        unique_ptr<node> const ptrOldHead = move(m_ptrHead);
+        m_ptrHead = move(ptrOldHead->next);
+        return ptrRes;
     }
     void push(T new_value) {
-        std::unique_ptr<node> p(new node(std::move(new_value)));
-        node* const new_tail = p.get();
-        if (tail) {
-            tail->next = std::move(p);
+        unique_ptr<node> ptrNewNode(new node(move(new_value)));
+        node* const pNewTail = ptrNewNode.get();
+        if (m_pTail) {
+            m_pTail->next = move(ptrNewNode);
         } else {
-            head = std::move(p);
+            m_ptrHead = move(ptrNewNode);
         }
-        tail = new_tail;
+        m_pTail = pNewTail;
     }
 };
-void queue_test();
+void test_queue();
 
 //Listing 6.5 A simple queue with a dummy node
 template<typename T>
 class dummy_queue {
 private:
     struct node {
-        std::shared_ptr<T> data;
-        std::unique_ptr<node> next;
+        shared_ptr<T>       data;
+        unique_ptr<node>    next;
     };
-    std::unique_ptr<node> head;
-    node *tail;
+    unique_ptr<node>        m_ptrHead;
+    node                    *m_pTail;
 
 public:
-    dummy_queue() : head(new node), tail(head.get()) {}
+    dummy_queue() : m_ptrHead(new node), m_pTail(m_ptrHead.get()) {}
     dummy_queue(dummy_queue const &other) = delete;
     dummy_queue& operator=(dummy_queue const &other) = delete;
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         TICK();
-        if (head.get() == tail) {
-            return std::make_shared<T>();
+        if (m_ptrHead.get() == m_pTail) {
+            return make_shared<T>();
         }
-        std::shared_ptr<T> const res(head->data);
-        std::unique_ptr<node> old_head = std::move(head);
-        head = std::move(old_head->next);
-        return res;
+        shared_ptr<T> const ptrRes(m_ptrHead->data);
+        unique_ptr<node> ptrOldHead = move(m_ptrHead);
+        m_ptrHead = move(ptrOldHead->next);
+        return ptrRes;
     }
     void push(T new_value) {
         TICK();
-        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
-        std::unique_ptr<node> p(new node);
-        tail->data = new_data;
-        node* const new_tail = p.get();
-        tail->next = std::move(p);
-        tail = new_tail;
+        shared_ptr<T> ptrNewData(make_shared<T>(move(new_value)));
+        unique_ptr<node> ptrNewNode(new node);
+        m_pTail->data = ptrNewData;
+        node* const pNewTail = ptrNewNode.get();
+        m_pTail->next = move(ptrNewNode);
+        m_pTail = pNewTail;
     }
 };
-void dummy_queue_write();
-void dummy_queue_read();
-void dummy_queue_test();
+void test_dummy_queue();
 
 //Listing 6.6 A thread-safe queue with fine-grained locking
 template<typename T>
 class threadsafe_queue_fine_grained {
 private:
     struct node {
-        std::shared_ptr<T> data;
-        std::unique_ptr<node> next;
+        shared_ptr<T>       data;
+        unique_ptr<node>    next;
     };
-    std::mutex head_mutex;
-    std::unique_ptr<node> head;
-    std::mutex tail_mutex;
-    node *tail;
+    mutex                   m_mutexHead;
+    unique_ptr<node>        m_ptrHead;
+    mutex                   m_mutexTail;
+    node                    *m_pTail;
 
     node* get_tail() {
         TICK();
-        std::lock_guard<std::mutex> tail_lock(tail_mutex);
-        return tail;
+        lock_guard<mutex>   lockTail(m_mutexTail);
+        return m_pTail;
     }
-#if 1//thead-safe
-    std::unique_ptr<node> pop_head() {
+#if 0//thead-safe
+    unique_ptr<node> pop_head() {
         TICK();
-        std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head.get() == tail) {
+        lock_guard<mutex>   lockHead(m_mutexHead);
+        if (m_ptrHead.get() == m_pTail) {
             return nullptr;
         }
-        std::unique_ptr<node> old_head = std::move(head);
-        head = std::move(old_head->next);
-        return old_head;
+        unique_ptr<node>    ptrOldHead = move(m_ptrHead);
+        m_ptrHead = move(ptrOldHead->next);
+        return ptrOldHead;
     }
 #else//thread-unsafe
-    std::unique_ptr<node> pop_head() {//This is a broken implementation
+    unique_ptr<node> pop_head() {//This is a broken implementation
         TICK();
-        node const *old_tail = get_tail();//Get old tail value outside lock on head_mutex
-        std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head.get() == old_tail) {
+        node const          *pOldTail = get_tail();//Get old tail value outside lock on head_mutex
+        lock_guard<mutex>   lockHead(m_mutexHead);
+        if (m_ptrHead.get() == pOldTail) {
             return nullptr;
         }
-        std::unique_ptr<node> old_head = std::move(head);
-        head = std::move(old_head->next);
-        return old_head;
+        unique_ptr<node>    ptrOldHead = move(m_ptrHead);
+        m_ptrHead = move(ptrOldHead->next);
+        return ptrOldHead;
     }
 #endif
 
 public:
-    threadsafe_queue_fine_grained() : head(new node), tail(head.get()) {}
+    threadsafe_queue_fine_grained() : m_ptrHead(new node), m_pTail(m_ptrHead.get()) {}
     threadsafe_queue_fine_grained(threadsafe_queue_fine_grained const &other) = delete;
     threadsafe_queue_fine_grained& operator=(threadsafe_queue_fine_grained const &other) = delete;
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         TICK();
-        std::unique_ptr<node> old_head = pop_head();
-        return old_head ? old_head->data : std::make_shared<T>();
+        unique_ptr<node>    ptrOldHead = pop_head();
+        return ptrOldHead ? ptrOldHead->data : make_shared<T>();
     }
     void push(T new_value) {
         TICK();
-        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
-        std::unique_ptr<node> p(new node);
-        node* const new_tail = p.get();//Pay more attention to the position of the key-word 'const'.
+        shared_ptr<T>       ptrNewData(make_shared<T>(move(new_value)));
+        unique_ptr<node>    ptrNewNode(new node);
+        node* const         ptrNewTail = ptrNewNode.get();//Pay more attention to the position of the key-word 'const'.
 
-        std::lock_guard<std::mutex> tail_lock(tail_mutex);
-        tail->data = new_data;
-        tail->next = std::move(p);
-        tail = new_tail;
+        lock_guard<mutex>   lockTail(m_mutexTail);
+        m_pTail->data = ptrNewData;
+        m_pTail->next = move(ptrNewNode);
+        m_pTail = ptrNewTail;
     }
 };
 
-void threadsafe_queue_fine_grained_write();
-void threadsafe_queue_fine_grained_read();
-void threadsafe_queue_fine_grained_test();
+void test_threadsafe_queue_fine_grained();
 
 //Listing 6.7 A thread-safe queue with locking and waiting: internals and interface
 template<typename T>
 class threadsafe_waiting_queue {
 private:
     struct node {
-        std::shared_ptr<T> data;
-        std::unique_ptr<node> next;
+        shared_ptr<T>       data;
+        unique_ptr<node>    next;
     };
-    std::mutex head_mutex;
-    std::unique_ptr<node> head;
-    std::mutex tail_mutex;
-    node *tail;
-    std::condition_variable data_cond;
+    mutex                   m_mutexHead;
+    unique_ptr<node>        m_ptrHead;
+    mutex                   m_mutexTail;
+    node                    *pTail;
+    condition_variable      m_cvData;
 
     node* get_tail() {
         TICK();
-        std::lock_guard<std::mutex> tail_lock(tail_mutex);
-        return tail;
+        lock_guard<mutex>   lockTail(m_mutexTail);
+        return pTail;
     }
-    std::unique_ptr<node> pop_head() {
+    unique_ptr<node> pop_head() {
         TICK();
-        std::unique_ptr<node> old_head = std::move(head);
-        head = std::move(old_head->next);
-        return old_head;
+        unique_ptr<node>    ptrOldHead = move(m_ptrHead);
+        m_ptrHead = move(ptrOldHead->next);
+        return ptrOldHead;
     }
-    std::unique_lock<std::mutex> wait_for_data() {
+    unique_lock<mutex> wait_for_data() {
         TICK();
-        std::unique_lock<std::mutex> head_lock(head_mutex);
-        data_cond.wait(head_lock, [&] {return head.get() != get_tail(); });
-        return std::move(head_lock);
+        unique_lock<mutex>  lockHead(m_mutexHead);
+        m_cvData.wait(lockHead, [&] {return m_ptrHead.get() != get_tail(); });
+        return move(lockHead);
     }
-    std::unique_ptr<node> wait_pop_head() {
+    unique_ptr<node> wait_pop_head() {
         TICK();
-        std::unique_lock<std::mutex> head_lock(wait_for_data());
+        unique_lock<mutex>  lockHead(wait_for_data());
         return pop_head();
     }
-    std::unique_ptr<node> wait_pop_head(T &value) {
+    unique_ptr<node> wait_pop_head(T &value) {
         TICK();
-        std::unique_lock<std::mutex> head_lock(wait_for_data());
-        value = std::move(*head->data);
+        unique_lock<mutex>  lockHead(wait_for_data());
+        value = move(*m_ptrHead->data);
         return pop_head();
     }
-    std::unique_ptr<node> try_pop_head() {
+    unique_ptr<node> try_pop_head() {
         TICK();
-        std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head.get() == tail) {
-            return std::unique_ptr<node>();
+        lock_guard<mutex>   lockHead(m_mutexHead);
+        if (m_ptrHead.get() == pTail) {
+            return unique_ptr<node>();
         }
         return pop_head();
     }
-    std::unique_ptr<node> try_pop_head(T& value) {
+    unique_ptr<node> try_pop_head(T& value) {
         TICK();
-        std::lock_guard<std::mutex> head_lock(head_mutex);
-        if (head.get() == tail) {
-            return std::unique_ptr<node>();
+        lock_guard<mutex>   lockHead(m_mutexHead);
+        if (m_ptrHead.get() == pTail) {
+            return unique_ptr<node>();
         }
-        value = std::move(*head->data);
+        value = move(*m_ptrHead->data);
         return pop_head();
     }
 
 public:
-    threadsafe_waiting_queue() :head(new node), tail(head.get()) {}
+    threadsafe_waiting_queue() :m_ptrHead(new node), pTail(m_ptrHead.get()) {}
     threadsafe_waiting_queue(const threadsafe_waiting_queue &other) = delete;
     threadsafe_waiting_queue& operator=(const threadsafe_waiting_queue &other) = delete;
 
-    std::shared_ptr<T> wait_and_pop() {
+    shared_ptr<T> wait_and_pop() {
         TICK();
-        std::unique_ptr<node> const old_head = wait_pop_head();
-        return old_head->data;
+        unique_ptr<node> const ptrOldHead = wait_pop_head();
+        return ptrOldHead->data;
     }
     void wait_and_pop(T& value) {
         TICK();
-        std::unique_ptr<node> const old_head = wait_pop_head(value);
+        unique_ptr<node> const ptrOldHead = wait_pop_head(value);
     }
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         TICK();
 #if 0
-        std::unique_lock<std::mutex> head_lock(head_mutex);
+        unique_lock<mutex> head_lock(head_mutex);
         data_cond.wait(head_lock, [&] {return head.get() != tail; });
 
-        std::unique_ptr<node> old_head = std::move(head);
+        unique_ptr<node> old_head = move(head);
         if (!old_head) {
-            return std::make_shared<T>();
+            return make_shared<T>();
         }
-        head = std::move(old_head->next);
+        head = move(old_head->next);
         return old_head->data;
 #else
-        std::unique_ptr<node> old_head = try_pop_head();
-        return old_head ? old_head->data : std::make_shared<T>();
+        unique_ptr<node> ptrOldHead = try_pop_head();
+        return ptrOldHead ? ptrOldHead->data : make_shared<T>();
 #endif
     }
     bool try_pop(T& value) {
         TICK();
-        std::unique_ptr<node> const old_head = try_pop_head(value);
-        return old_head ? true : false;
+        unique_ptr<node> const ptrOldHead = try_pop_head(value);
+        return ptrOldHead ? true : false;
     }
     void push(T new_value) {
         TICK();
-        std::shared_ptr<T> new_data(std::make_shared<T>(std::move(new_value)));
-        std::unique_ptr<node> p(new node);
+        shared_ptr<T>           ptrNewData(make_shared<T>(move(new_value)));
+        unique_ptr<node>        ptrNewNode(new node);
         {
-            std::lock_guard<std::mutex> tail_lock(tail_mutex);
-            tail->data = new_data;
-            node* const new_tail = p.get();
-            tail->next = std::move(p);
-            tail = new_tail;
+            lock_guard<mutex>   lockTail(m_mutexTail);
+            pTail->data = ptrNewData;
+            node* const new_tail = ptrNewNode.get();
+            pTail->next = move(ptrNewNode);
+            pTail = new_tail;
         }
-        data_cond.notify_one();
+        m_cvData.notify_one();
     }
     bool empty() {
         TICK();
-        std::lock_guard<std::mutex> head_lock(head_mutex);
-        return head.get() == tail;
+        lock_guard<mutex>       lockHead(m_mutexHead);
+        return m_ptrHead.get() == pTail;
     }
     void loop() {
         TICK();
         while (true) {
+            WARN("loop...");
             if (empty()) {
                 common_fun::sleep(THOUSAND);
                 continue;
             }
-            data_cond.notify_one();
+            m_cvData.notify_one();
+            yield();
         }
     }
 };
-void threadsafe_waiting_queue_write();
-void threadsafe_waiting_queue_read();
-void threadsafe_waiting_queue_loop();
-void threadsafe_waiting_queue_test();
+
+void test_threadsafe_waiting_queue();
 
 //6.3 Designing more complex lock-based data structures
 //6.3.1 Writing a thread-safe lookup table using locks
 //Listing 6.11 A thread-safe lookup table
 #define USE_BOOST_SHARED_LOCK 0
-template<typename Key, typename Value, typename Hash = std::hash<Key>>
+template<typename Key, typename Value, typename Hash = hash<Key>>
 class threadsafe_lookup_table {
 private:
     class bucket_type {
     private:
-        typedef std::pair<Key, Value> bucket_value;
-        typedef std::list<bucket_value> bucket_data;
+        typedef pair<Key, Value>                    BUCKET_VALUE;
+        typedef list<BUCKET_VALUE>                  LST_BUCKET_DATA;
 #if 1
-        typedef typename bucket_data::iterator bucket_iterator;
+        typedef typename LST_BUCKET_DATA::iterator  BUCKET_ITERATOR;
 #else
-        typedef typename bucket_data::const_iterator bucket_iterator;
+        typedef typename LST_BUCKET_DATA::const_iterator BUCKET_ITERATOR;
 #endif
-        //data: 'mutable' should be added or the return type of 'find_entry_for' is bucket_data::const_iterator.
-        mutable bucket_data data;
+        //data: 'mutable' should be added or the return type of 'find' is LST_BUCKET_DATA::const_iterator.
+        mutable LST_BUCKET_DATA     m_bucketData;
 #if USE_BOOST_SHARED_LOCK
-        mutable boost::shared_mutex mutex;
+        mutable boost::shared_mutex m_mutex;
 #else
-        mutable std::mutex mutex;
+        mutable mutex               m_mutex;
 #endif
-        bucket_iterator find_entry_for(Key const& key) const {
+        BUCKET_ITERATOR find(Key const& key) const {
             TICK();
-            return std::find_if(data.begin(), data.end(), [&](bucket_value const& item) {return item.first == key; });
+            return find_if(m_bucketData.begin(), m_bucketData.end(),
+                [&](BUCKET_VALUE const& item) {return item.first == key; });
         }
 
     public:
-        Value value_for(Key const& key, Value const& default_value)const {
+        Value get(Key const& key, Value const& default_value)const {
             TICK();
 #if USE_BOOST_SHARED_LOCK
-            std::shared_lock<boost::shared_mutex> lock(mutex);
+            shared_lock<boost::shared_mutex> lock(m_mutex);
 #else
-            std::unique_lock<std::mutex> lock(mutex);
+            unique_lock<mutex> lock(m_mutex);
 #endif
-            bucket_iterator const found_entry = find_entry_for(key);
-            return (found_entry == data.end()) ? default_value : found_entry->second;
+            BUCKET_ITERATOR const posFind = find(key);
+            return (posFind == m_bucketData.end()) ? default_value : posFind->second;
         }
-        bool add_or_update_mapping(Key const& key, Value const& value) {
+        bool insert(Key const& key, Value const& value) {
             TICK();
 #if USE_BOOST_SHARED_LOCK
-            std::unique_lock<boost::shared_mutex> lock(mutex);
+            unique_lock<boost::shared_mutex> lock(m_mutex);
 #else
-            std::unique_lock<std::mutex> lock(mutex);
+            unique_lock<mutex> lock(m_mutex);
 #endif
-            bucket_iterator const found_entry = find_entry_for(key);
-            if (found_entry == data.end()) {
-                data.push_back(bucket_value(key, value));
+            BUCKET_ITERATOR const posFind = find(key);
+            if (posFind == m_bucketData.end()) {
+                m_bucketData.push_back(BUCKET_VALUE(key, value));
                 return true;
             } else {
-                found_entry->second = value;
+                posFind->second = value;
                 return false;
             }
         }
-        bool remove_mapping(Key const& key) {
+        bool remove(Key const& key) {
             TICK();
 #if USE_BOOST_SHARED_LOCK
-            std::unique_lock<boost::shared_mutex> lock(mutex);
+            unique_lock<boost::shared_mutex> lock(m_mutex);
 #else
-            std::unique_lock<std::mutex> lock(mutex);
+            unique_lock<mutex> lock(m_mutex);
 #endif
-            bucket_iterator const found_entry = find_entry_for(key);
-            if (found_entry != data.end()) {
-                data.erase(found_entry);
+            BUCKET_ITERATOR const posFind = find(key);
+            if (posFind != m_bucketData.end()) {
+                m_bucketData.erase(posFind);
                 return true;
             } else {
                 return false;
             }
         }
+        template<typename Key, typename Value, typename Hash>
+        friend class threadsafe_lookup_table;
     };
-    std::vector<std::unique_ptr<bucket_type>> buckets;
-    Hash hasher;
+    vector<unique_ptr<bucket_type>> m_vctBuckets;
+    Hash                            m_hasher;
 
     bucket_type& get_bucket(Key const& key) const {
         TICK();
-        std::size_t const bucket_index = hasher(key) % buckets.size();
-        return *buckets[bucket_index];
+        size_t const uBucketIndex = m_hasher(key) % m_vctBuckets.size();
+        return *m_vctBuckets[uBucketIndex];
     }
 
 public:
-    typedef Key key_type;
-    typedef Value mapped_type;
-    typedef Hash hash_type;
+    typedef Key     key_type;
+    typedef Value   mapped_type;
+    typedef Hash    hash_type;
 
     explicit threadsafe_lookup_table(unsigned num_buckets = 19, Hash const& hasher_ = Hash()) :
-        buckets(num_buckets), hasher(hasher_) {
+        m_vctBuckets(num_buckets), m_hasher(hasher_) {
         //TICK();
         for (unsigned i = 0; i < num_buckets; ++i) {
-            buckets[i].reset(new bucket_type);
+            m_vctBuckets[i].reset(new bucket_type);
         }
     }
 
     threadsafe_lookup_table(threadsafe_lookup_table const& other) = delete;
     threadsafe_lookup_table& operator=(threadsafe_lookup_table const& other) = delete;
 
-    Value value_for(Key const& key, Value const& default_value = Value()) const {
+    Value get(Key const& key, Value const& default_value = Value()) const {
         TICK();
-        return get_bucket(key).value_for(key, default_value);
+        return get_bucket(key).get(key, default_value);
     }
-    bool add_or_update_mapping(Key const& key, Value const& value) {
+    bool insert(Key const& key, Value const& value) {
         TICK();
-        return get_bucket(key).add_or_update_mapping(key, value);
+        return get_bucket(key).insert(key, value);
     }
-    bool remove_mapping(Key const& key) {
+    bool remove(Key const& key) {
         TICK();
-        return get_bucket(key).remove_mapping(key);
+        return get_bucket(key).remove(key);
     }
-    std::map<Key, Value> get_map() const {
+    map<Key, Value> get_map() const {
         TICK();
 #if USE_BOOST_SHARED_LOCK
-        std::vector<std::unique_lock<boost::shared_mutex>> locks;
+        vector<unique_lock<boost::shared_mutex>>    vctLocks;
 #else
-        std::vector<std::unique_lock<std::mutex>> locks;
+        vector<unique_lock<mutex>>                  vctLocks;
 #endif
-        for (unsigned i = 0; i < buckets.size(); ++i) {
+        for (unsigned i = 0; i < m_vctBuckets.size(); ++i) {
 #if USE_BOOST_SHARED_LOCK
-            locks.push_back(std::unique_lock<boost::shared_mutex>(buckets[i].mutex));
+            vctLocks.push_back(unique_lock<boost::shared_mutex>(m_vctBuckets[i].m_mutex));
 #else
-            locks.push_back(std::unique_lock<std::mutex>(buckets[i]->mutex));
+            vctLocks.push_back(unique_lock<mutex>(m_vctBuckets[i]->m_mutex));
 #endif
         }
-        std::map<Key, Value> res;
-        for (unsigned i = 0; i < buckets.size(); ++i) {
-            for (bucket_iterator it = buckets[i]->data.begin(); it != buckets[i]->data.end(); ++it) {
-                res.insert(*it);
+        map<Key, Value> mapRes;
+        for (unsigned i = 0; i < m_vctBuckets.size(); ++i) {
+            for (bucket_type::BUCKET_ITERATOR pos = m_vctBuckets[i]->m_bucketData.begin();
+                pos != m_vctBuckets[i]->m_bucketData.end(); ++pos) {
+                mapRes.insert(*pos);
             }
         }
-        return res;
+        return mapRes;
     }
 };
-void threadsafe_lookup_table_add();
-void threadsafe_lookup_table_remove();
-void threadsafe_lookup_table_read();
-void threadsafe_lookup_table_test();
+
+void test_threadsafe_lookup_table();
 
 //6.3.2 Writing a thread-safe list using locks
 //Listing 6.13 A thread-safe list with iteration support
 template<typename T>
 class threadsafe_list {
     struct node {
-        std::mutex m;
-        std::shared_ptr<T> data;
-        std::unique_ptr<node> next;
+        mutex               m;
+        shared_ptr<T>       data;
+        unique_ptr<node>    next;
 
-        node() : next() {}
-        explicit node(T const& value) : data(std::make_shared<T>(value)) {}
+        node() : data(nullptr), next() {}
+        explicit node(T const& value) : data(make_shared<T>(value)), next(nullptr) {}
     };
-    node head;
+    node                    m_head;
 
 public:
     threadsafe_list() {}
@@ -639,63 +660,61 @@ public:
 
     void push_front(T const& value) {
         TICK();
-        std::unique_ptr<node> new_node(new node(value));
-        std::lock_guard<std::mutex> lk(head.m);
-        new_node->next = std::move(head.next);
-        head.next = std::move(new_node);
+        unique_ptr<node> ptrNewNode(new node(value));
+        lock_guard<mutex> lock(m_head.m);
+        ptrNewNode->next = move(m_head.next);
+        m_head.next = move(ptrNewNode);
     }
     template<typename Function>
     void for_each(Function f) {
         TICK();
-        node* current = &head;
-        std::unique_lock<std::mutex> lk(head.m);
-        while (node* const next = current->next.get()) {
-            std::unique_lock<std::mutex> next_lk(next->m);
-            lk.unlock();
-            f(*next->data);
-            current = next;
-            lk = std::move(next_lk);
+        node* pCurrent = &m_head;
+        unique_lock<mutex> lockHead(m_head.m);
+        while (node* const pNext = pCurrent->next.get()) {
+            unique_lock<mutex> lockNext(pNext->m);
+            lockHead.unlock();
+            f(*pNext->data);
+            pCurrent = pNext;
+            lockHead = move(lockNext);
         }
     }
     template<typename Predicate>
-    std::shared_ptr<T> find_first_if(Predicate p) {
+    shared_ptr<T> find_first_if(Predicate p) {
         TICK();
-        node* current = &head;
-        std::unique_lock<std::mutex> lk(head.m);
-        while (node* const next = current->next.get()) {
-            std::unique_lock<std::mutex> next_lk(next->m);
-            lk.unlock();
-            if (p(*next->data)) {
-                return next->data;
+        node* pCurrent = &m_head;
+        unique_lock<mutex> lockHead(m_head.m);
+        while (node* const pNext = pCurrent->next.get()) {
+            unique_lock<mutex> lockNext(pNext->m);
+            lockHead.unlock();
+            if (p(*pNext->data)) {
+                return pNext->data;
             }
-            current = next;
-            lk = std::move(next_lk);
+            pCurrent = pNext;
+            lockHead = move(lockNext);
         }
-        return std::make_shared<T>();
+        return make_shared<T>();
     }
     template<typename Predicate>
     void remove_if(Predicate p) {
         //TICK();
-        node* current = &head;
-        std::unique_lock<std::mutex> lk(head.m);
-        while (node* const next = current->next.get()) {
-            std::unique_lock<std::mutex> next_lk(next->m);
-            if (p(*(next->data))) {
-                std::unique_ptr<node> old_next = std::move(current->next);
-                current->next = std::move(next->next);
-                next_lk.unlock();
+        node* pCurrent = &m_head;
+        unique_lock<mutex> lockHead(m_head.m);
+        while (node* const pNext = pCurrent->next.get()) {
+            unique_lock<mutex> lockNext(pNext->m);
+            if (p(*(pNext->data))) {
+                unique_ptr<node> ptrOldNext = move(pCurrent->next);
+                pCurrent->next = move(pNext->next);
+                lockNext.unlock();
             } else {
-                lk.unlock();
-                current = next;
-                lk = std::move(next_lk);
+                lockHead.unlock();
+                pCurrent = pNext;
+                lockHead = move(lockNext);
             }
         }
     }
 };
-void threadsafe_list_write(unsigned const& val);
-void threadsafe_list_remove();
-void threadsafe_list_read();
-void threadsafe_list_test();
+
+void test_threadsafe_list();
 
 }//namespace lock_based_conc_data
 

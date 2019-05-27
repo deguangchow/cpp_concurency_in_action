@@ -107,15 +107,15 @@ int main() {
 #endif
 
 #if 0//chapter6
-    lock_based_conc_data::lock_thread_safe_stack_test();
-    lock_based_conc_data::treadsafe_queue_test();
-    lock_based_conc_data::threadsafe_queue_shared_ptr_test();
-    lock_based_conc_data::queue_test();
-    lock_based_conc_data::dummy_queue_test();
-    lock_based_conc_data::threadsafe_queue_fine_grained_test();
-    lock_based_conc_data::threadsafe_waiting_queue_test();
-    lock_based_conc_data::threadsafe_lookup_table_test();
-    lock_based_conc_data::threadsafe_list_test();
+    lock_based_conc_data::test_lock_based_thread_safe_stack();
+    lock_based_conc_data::test_threadsafe_queue();
+    lock_based_conc_data::test_threadsafe_queue_shared_ptr();
+    lock_based_conc_data::test_queue();
+    lock_based_conc_data::test_dummy_queue();
+    lock_based_conc_data::test_threadsafe_queue_fine_grained();
+    lock_based_conc_data::test_threadsafe_waiting_queue();
+    lock_based_conc_data::test_threadsafe_lookup_table();
+    lock_based_conc_data::test_threadsafe_list();
 #endif
 
 #if 0//chapter7
