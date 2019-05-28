@@ -85,25 +85,25 @@ int main() {
 #endif
 
 #if 0//chapter5
-    atomic_type::atomic_flag_test();
-    atomic_type::spinlock_mutex_test();
-    atomic_type::atomic_bool_test();
-    atomic_type::compare_exchange_weak_test();
-    atomic_type::compare_exchange_weak_memory_order_test();
-    atomic_type::atomic_pointer_test();
-    atomic_type::atomic_load_store_test();
-    atomic_type::atomic_sync_from_thread_test();
-    atomic_type::call_unordered_test();
-    atomic_type::sequential_consistency_test();
-    atomic_type::relaxed_test();
-    atomic_type::relaxed_multi_thread_test();
-    atomic_type::acquire_release_test();
-    atomic_type::acquire_release_relaxed_test();
-    atomic_type::transitive_sync_acquire_release();
-    atomic_type::consume_test();
-    atomic_type::consume_queue_test();
-    atomic_type::fences_test();
-    atomic_type::nonatomic_test();
+    atomic_type::test_atomic_flag();
+    atomic_type::test_spinlock_mutex();
+    atomic_type::test_atomic_bool();
+    atomic_type::test_compare_exchange_weak();
+    atomic_type::test_compare_exchange_weak_memory_order();
+    atomic_type::test_atomic_pointer();
+    atomic_type::test_atomic_load_store();
+    atomic_type::test_atomic_sync_from_thread();
+    atomic_type::test_call_unordered();
+    atomic_type::test_sequential_consistency();
+    atomic_type::test_relaxed();
+    atomic_type::test_relaxed_multi_thread();
+    atomic_type::test_acquire_release();
+    atomic_type::test_acquire_release_relaxed();
+    atomic_type::test_transitive_sync_acquire_release();
+    atomic_type::test_consume();
+    atomic_type::test_consume_queue();
+    atomic_type::test_fences();
+    atomic_type::test_nonatomic();
 #endif
 
 #if 0//chapter6
