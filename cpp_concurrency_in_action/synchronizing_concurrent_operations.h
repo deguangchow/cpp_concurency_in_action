@@ -16,7 +16,7 @@ namespace sync_conc_opera {
 void wait_for_flag();
 
 //4.1.1 Waiting for a condition with condition variables
-//Listing 4.1 Waiting for data to process with a std::condition_variable
+//Listing 4.1 Waiting for data to process with a condition_variable
 class data_chunk {};
 bool more_data_to_prepare();
 data_chunk prepare_data();
@@ -27,7 +27,7 @@ void data_processing_thread();
 void wait_for_condition_variable();
 
 //4.1.2 Building a thread-safe queue with condition variables
-//Listing 4.2 std::queue interface
+//Listing 4.2 queue interface
 template<class T, class Container = std::deque<T>>
 class queue {
 private:
@@ -92,27 +92,27 @@ public:
 template<typename T>
 class threadsafe_queue {
 private:
-    mutable std::mutex mut; //The mutex must be mutable
+    mutable mutex mut; //The mutex must be mutable
     std::queue<T> data_queue;
-    std::condition_variable data_cond;
+    condition_variable data_cond;
 
 public:
     threadsafe_queue() : mut(), data_queue(), data_cond() {}
     threadsafe_queue(threadsafe_queue const &other) : mut(), data_queue(), data_cond() {
-        std::lock_guard<std::mutex> lk(other.mut);
+        lock_guard<mutex> lk(other.mut);
         data_queue = other.data_queue;
     }
     threadsafe_queue& operator=(threadsafe_queue const&) = delete;  //Disallow assignment for simplicity
 
     void push(T new_value) {
         TICK();
-        std::lock_guard <std::mutex> lk(mut);
+        lock_guard <mutex> lk(mut);
         data_queue.push(new_value);
         data_cond.notify_one();
     }
     bool try_pop(T &value) {
         TICK();
-        std::lock_guard<std::mutex> lk(mut);
+        lock_guard<mutex> lk(mut);
         if (data_queue.empty()) {
             return false;
         }
@@ -120,33 +120,33 @@ public:
         data_queue.pop();
         return true;
     }
-    std::shared_ptr<T> try_pop() {
+    shared_ptr<T> try_pop() {
         TICK();
-        std::lock_guard<std::mutex> lk(mut);
+        lock_guard<mutex> lk(mut);
         if (data_queue.empty()) {
-            return std::make_shared<T>();
+            return make_shared<T>();
         }
-        std::shared_ptr<T> res(std::make_shared<T>(data_queue.front()));
+        shared_ptr<T> res(make_shared<T>(data_queue.front()));
         data_queue.pop();
         return res;
     }
     void wait_and_pop(T &value) {
         TICK();
-        std::unique_lock<std::mutex> lk(mut);
+        unique_lock<mutex> lk(mut);
         data_cond.wait(lk, [this] {return !data_queue.empty(); });
         value = data_queue.front();
         data_queue.pop();
     }
-    std::shared_ptr<T> wait_and_pop() {
+    shared_ptr<T> wait_and_pop() {
         TICK();
-        std::unique_lock<std::mutex> lk(mut);
+        unique_lock<mutex> lk(mut);
         data_cond.wait(lk, [this] {return !data_queue.empty(); });
-        std::shared_ptr<T> res(std::make_shared<T>(data_queue.front()));
+        shared_ptr<T> res(make_shared<T>(data_queue.front()));
         data_cond.pop();
         return res;
     }
     bool empty() const {
-        std::lock_guard<std::mutex> lc(mut);
+        lock_guard<mutex> lc(mut);
         return data_queue.empty();
     }
 };
@@ -157,20 +157,20 @@ void threadsafe_queue_test();
 
 //4.2 Waiting for one-off events with futures
 //4.2.1 Returning values from background tasks.
-//Listing 4.6 Using std::future to get the return value of an asynchronous task
+//Listing 4.6 Using future to get the return value of an asynchronous task
 int find_the_answer_to_ltuae();
 void do_other_stuff();
 void future_async_test();
 
-//Listing 4.7 Passing arguments to a function with std::async
+//Listing 4.7 Passing arguments to a function with async
 struct X {
-    int foo(int i, std::string const &s) {
+    int foo(int i, string const &s) {
         TICK();
         return TEN * i;
     }
-    std::string bar(std::string const &s) {
+    string bar(string const &s) {
         TICK();
-        return std::string("bar: ") + s;
+        return string("bar: ") + s;
     }
 };
 struct Y {
@@ -193,33 +193,33 @@ public:
 void future_async_struct_test();
 
 //4.2.2 Associating a task with a future
-//Listing 4.8 Partial class definaition for a specialization of std::packaged_task<>
+//Listing 4.8 Partial class definaition for a specialization of packaged_task<>
 #if 0//error: can`t be compiled correctly
 template<>
-class packaged_task<std::string(std::vector<char>*, int)> {
+class packaged_task<string(vector<char>*, int)> {
 public:
     template<typename Callable>
     explicit packaged_task(Callable &&f) {}
-    std::future<std::string> get_future() {
+    future<string> get_future() {
         TICK();
-        return std::future<string>("");
+        return future<string>("");
     }
-    void operator()(std::vector<char>*, int) {
+    void operator()(vector<char>*, int) {
         TICK();
     }
 };
 #endif
 
-//Listing 4.9 Running code on a GUI thread using std::packaged_task
+//Listing 4.9 Running code on a GUI thread using packaged_task
 
 bool gui_shutdown_message_received();
 void get_and_process_gui_message();
 void gui_thread();
 template<typename Func>
-std::future<void> post_task_for_gui_thread(Func f);
+future<void> post_task_for_gui_thread(Func f);
 void packaged_task_test();
 
-//4.2.3 Making (std::)promises
+//4.2.3 Making ()promises
 //Listing 4.10 Handling multiple connections from a single thread using promise
 class payload_type {};
 struct data_packet {
@@ -229,7 +229,7 @@ struct data_packet {
 struct outgoing_packet {
     unsigned id;
     payload_type payload;
-    std::promise<bool> promise;
+    promise<bool> promise;
 };
 class Connection {
 public:
@@ -243,9 +243,9 @@ public:
         TICK();
         return data_packet();
     }
-    std::promise<payload_type> get_promise(unsigned const &id) {
+    promise<payload_type> get_promise(unsigned const &id) {
         TICK();
-        return std::promise<payload_type>();
+        return promise<payload_type>();
     }
     bool has_outgoing_data() {
         TICK();
@@ -259,8 +259,8 @@ public:
         TICK();
     }
 };
-typedef std::shared_ptr<Connection> Connection_ptr;
-typedef std::set<Connection_ptr> SetConnection;
+typedef shared_ptr<Connection> Connection_ptr;
+typedef set<Connection_ptr> SetConnection;
 typedef SetConnection::iterator Connection_iterator;
 bool done(SetConnection const &connections);
 void process_connections(SetConnection &connections);
@@ -291,23 +291,23 @@ void condition_variable_timeout_test();
 //4.4.1 Funcional programming with futures
 //Listing 4.12 A sequential implementation of Quicksort
 template<typename T>
-std::list<T> sequential_quick_sort(std::list<T> input) {
+list<T> sequential_quick_sort(list<T> input) {
     TICK();
     if (input.empty()) {
         return input;
     }
-    std::list<T> result;
+    list<T> result;
     result.splice(result.begin(), input, input.begin());
     T const &pivot = *result.begin();
 
-    auto divide_point = std::partition(input.begin(), input.end(),
+    auto divide_point = partition(input.begin(), input.end(),
         [&pivot](T const &t) {return t < pivot; });
 
-    std::list<T> lower_part;
+    list<T> lower_part;
     lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
 
-    auto new_lower(sequential_quick_sort(std::move(lower_part)));
-    auto new_higher(sequential_quick_sort(std::move(input)));
+    auto new_lower(sequential_quick_sort(move(lower_part)));
+    auto new_higher(sequential_quick_sort(move(input)));
     result.splice(result.end(), new_higher);
     result.splice(result.begin(), new_lower);
     return result;
@@ -317,23 +317,23 @@ void sequential_quick_sort_test();
 
 //Listing 4.13 Parallel Quicksort using futures
 template<typename T>
-std::list<T> parallel_quick_sort(std::list<T> input) {
+list<T> parallel_quick_sort(list<T> input) {
     TICK();
     if (input.empty()) {
         return input;
     }
 
-    std::list<T> result;
+    list<T> result;
     result.splice(result.begin(), input, input.begin());
     T const &pivot = *result.begin();
-    auto divide_point = std::partition(input.begin(), input.end(),
+    auto divide_point = partition(input.begin(), input.end(),
         [&pivot](T const &t) {return t < pivot; });
 
-    std::list<T> lower_part;
+    list<T> lower_part;
     lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
 
-    std::future<std::list<T>> new_lower(std::async(&parallel_quick_sort<T>, std::move(lower_part)));
-    auto new_higher(std::move(parallel_quick_sort(input)));
+    future<list<T>> new_lower(async(&parallel_quick_sort<T>, move(lower_part)));
+    auto new_higher(move(parallel_quick_sort(input)));
 
     result.splice(result.end(), new_higher);
     result.splice(result.begin(), new_lower.get());
@@ -345,23 +345,23 @@ void parallel_quick_sort_test();
 //Listing 4.14 A sample implementation of spawn_task
 #if 0//original sample
 template<typename F, typename A>
-std::future<typename std::result_of<F(A&&)>::type> spawn_task(F &&f, A &&a) {
+future<typename result_of<F(A&&)>::type> spawn_task(F &&f, A &&a) {
     TICK();
-    typedef std::result_of<F(A&&)>::type result_type;
-    std::packaged_task<result_type(A&&)> task(std::move(f));
-    std::future<result_type> res(task.get_future());
-    std::thread t(std::move(task), std::move(a));
+    typedef result_of<F(A&&)>::type result_type;
+    packaged_task<result_type(A&&)> task(move(f));
+    future<result_type> res(task.get_future());
+    thread t(move(task), move(a));
     t.detach();
     return res;
 }
 #else//extended sample
 template<typename F, typename...Args>
-auto spawn_task(F &&f, Args &&...args)->std::future<typename std::result_of<F(Args...)>::type> {
+auto spawn_task(F &&f, Args &&...args)->future<typename result_of<F(Args...)>::type> {
     TICK();
-    using result_type = typename std::result_of<F(Args...)>::type;
-    std::packaged_task<result_type(Args...)> task(std::move(f));
-    std::future<result_type> res(task.get_future());
-    std::thread t(std::move(task), std::forward<Args>(args)...);
+    using result_type = typename result_of<F(Args...)>::type;
+    packaged_task<result_type(Args...)> task(move(f));
+    future<result_type> res(task.get_future());
+    thread t(move(task), forward<Args>(args)...);
     t.detach();
     return res;
 }
@@ -379,12 +379,12 @@ class close_queue {
 };
 
 struct card_inserted {
-    std::string account;
+    string account;
 };
 template<typename T>
 class handle {
 public:
-    typedef std::function<void(T const &)> Func;
+    typedef function<void(T const &)> Func;
     void operator()(Func) {
         TICK();
     }
@@ -412,8 +412,8 @@ class atm {
     messaging::sender interface_hardware;
     void(atm::*state)();
 
-    std::string account;
-    std::string pin;
+    string account;
+    string pin;
     int display_enter_card() {
         TICK();
         return 0;
@@ -438,7 +438,7 @@ class atm {
             }
         });
     }
-    int verify_pin(std::string const&, std::string const&, messaging::receiver const &) {
+    int verify_pin(string const&, string const&, messaging::receiver const &) {
         TICK();
         return 0;
     }
