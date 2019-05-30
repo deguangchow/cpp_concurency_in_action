@@ -43,8 +43,13 @@ using std::mutex;
 using std::condition_variable;
 using std::condition_variable_any;
 using std::cv_status;
+
+using std::lock;
 using std::lock_guard;
 using std::unique_lock;
+using std::defer_lock;
+using std::adopt_lock;
+
 using std::future;
 using std::shared_future;
 using std::future_status;
@@ -62,6 +67,9 @@ using std::atomic;
 using std::atomic_bool;
 using std::atomic_flag;
 using std::memory_order;
+
+using std::once_flag;
+using std::call_once;
 
 using std::chrono::seconds;
 using std::chrono::milliseconds;
@@ -104,6 +112,7 @@ using std::hash;
 using std::exception;
 using std::current_exception;
 using std::out_of_range;
+using std::logic_error;
 
 using std::cin;
 using std::cout;

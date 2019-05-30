@@ -51,19 +51,20 @@ int main() {
 #endif
 
 #if 0//chapter3
-    thread_sharing_data::foo();
-    thread_sharing_data::stack_test();
-    thread_sharing_data::thread_safe_stack_test();
-    thread_sharing_data::std_lock_test();
-    thread_sharing_data::hierarchical_mutex_test();
-    thread_sharing_data::std_lock_ex_test();
-    thread_sharing_data::process_data();
-    thread_sharing_data::get_and_process_data();
-    thread_sharing_data::compare_operator_test();
-    thread_sharing_data::RAII_test();
-    thread_sharing_data::call_once_test();
-    thread_sharing_data::Connection_call_once_test();
-    thread_sharing_data::Connection_concurrency_call_once_test();
+    thread_sharing_data::test_foo();
+    thread_sharing_data::test_stack();
+    thread_sharing_data::test_thread_safe_stack();
+    thread_sharing_data::test_std_lock();
+    thread_sharing_data::test_hierarchical_mutex();
+    thread_sharing_data::test_std_lock_ex();
+    thread_sharing_data::test_process_data();
+    thread_sharing_data::test_get_and_process_data();
+    thread_sharing_data::test_compare_operator();
+    thread_sharing_data::test_RAII();
+    thread_sharing_data::test_RAII_lock();
+    thread_sharing_data::test_call_once();
+    thread_sharing_data::test_connection_call_once();
+    thread_sharing_data::test_connection_concurrency_call_once();
 #endif
 
 #if 0//chapter4

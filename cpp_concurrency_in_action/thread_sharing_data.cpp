@@ -11,77 +11,81 @@
 
 namespace thread_sharing_data {
 
-std::list<int> some_list;
-std::mutex some_mutex;
+list<int>  g_lstSome;
+mutex      g_mutexSome;
 
 void add_to_list(int new_value) {
     TICK();
-    std::lock_guard<std::mutex> guard(some_mutex);
-    some_list.push_back(new_value);
+    lock_guard<mutex> lock(g_mutexSome);
+    g_lstSome.push_back(new_value);
 }
 
 bool list_contains(int value_to_find) {
     TICK();
-    std::lock_guard<std::mutex> gurad(some_mutex);
-    return std::find(some_list.begin(), some_list.end(), value_to_find) != some_list.end();
+    lock_guard<mutex> lock(g_mutexSome);
+    return find(g_lstSome.begin(), g_lstSome.end(), value_to_find) != g_lstSome.end();
 }
 
-some_data *unprotected;
+some_data       *g_pUnprotectedData;
 void malicious_function(some_data &protected_data) {
     TICK();
-    unprotected = &protected_data;
+    g_pUnprotectedData = &protected_data;
 }
-data_wrapper x;
-void foo() {
+data_wrapper    g_datawrapperX;
+void test_foo() {
     TICK();
-    x.process_data(malicious_function); //Pass in a malicious function
-    unprotected->do_something();        //Unprotected access to protected data
+    g_datawrapperX.process_data(malicious_function); //Pass in a malicious function
+    g_pUnprotectedData->do_something();        //Unprotected access to protected data
 }
 
 void do_something(int val) {
     TICK();
 }
 
-void stack_test() {
+void test_stack() {
     TICK();
-    stack<int> s;
-    s.push(1);
-    s.push(2);
-    s.push(3);
-    while (!s.empty()) {
-        int const value = s.top();
-        s.pop();
+    stack<int> stkData;
+    stkData.push(1);
+    stkData.push(2);
+    stkData.push(3);
+    while (!stkData.empty()) {
+        int const value = stkData.top();
+        stkData.pop();
         do_something(value);
     }
 }
 
-thread_safe_stack<int> s;
-void thread_safe_stack_test() {
+thread_safe_stack<int>          g_threadSafeStack;
+void test_thread_safe_stack() {
     TICK();
 
-    unsigned const push_thread_num = THREAD_NUM_128 - 1;
-    unsigned const pop_thread_num = THREAD_NUM_128;
+    unsigned const PUSH_THREAD_NUM  = THREAD_NUM_128 - 1;
+    unsigned const POP_THREAD_NUM   = THREAD_NUM_128;
 
-    std::vector<std::thread> push_threads(push_thread_num);
-    std::vector<std::thread> pop_threads(pop_thread_num);
-
-    for (unsigned i = 0; i < push_thread_num; ++i) {
-        push_threads[i] = std::thread(&thread_safe_stack<int>::push, &s, i);
-    }
-    for (unsigned i = 0; i < pop_thread_num; ++i) {
-        pop_threads[i] = std::thread(&thread_safe_stack<int>::pop, &s);
-    }
-
-    for (unsigned i = 0; i < push_thread_num; ++i) {
-        push_threads[i].join();
-    }
-    for (unsigned i = 0; i < pop_thread_num; ++i) {
-        pop_threads[i].join();  //When the num of threads to pop data from the stack is more than to push,
-                                //there must be an "empty_stack" assert!
+    vector<thread> vctPushThreads(PUSH_THREAD_NUM);
+    vector<thread> vctPopThreads(POP_THREAD_NUM);
+    try {
+        for (unsigned i = 0; i < PUSH_THREAD_NUM; ++i) {
+            vctPushThreads[i] = thread(&thread_safe_stack<int>::push, &g_threadSafeStack, i);
+        }
+        for (unsigned i = 0; i < POP_THREAD_NUM; ++i) {
+            vctPopThreads[i] = thread(&thread_safe_stack<int>::pop, &g_threadSafeStack);
+        }
+        for (unsigned i = 0; i < PUSH_THREAD_NUM; ++i) {
+            vctPushThreads[i].join();
+        }
+        for (unsigned i = 0; i < POP_THREAD_NUM; ++i) {
+            vctPopThreads[i].join();  //When the num of threads to pop data from the stack is more than to push,
+                                      //there must be an "empty_stack" assert!
+        }
+    } catch (empty_stack const& e) {// can not catch anything!!!
+        ERR("catch empty_stack: %s", e.what());
+    } catch (...) {
+        ERR("catch ...");
     }
 }
 
-void std_lock_test() {
+void test_std_lock() {
     TICK();
     X<int> x1(some_big_object<int>(1));
     X<int> x2(some_big_object<int>(2));
@@ -90,10 +94,10 @@ void std_lock_test() {
 
 //3.2.5 Further guidelines for avoiding deadlock
 //Listing 3.7 Using a lock hierarchy to prevent deadlock
-thread_local unsigned long hierarchical_mutex::this_thread_hierarchy_value(ULONG_MAX);
-hierarchical_mutex high_level_mutex(TEN_THOUSAND);
-hierarchical_mutex low_level_mutex(THOUSAND * 5);
-hierarchical_mutex other_mutex(HUNDRED);
+thread_local unsigned long hierarchical_mutex::m_uThisThreadHierarchy_tl(ULONG_MAX);
+hierarchical_mutex g_hmtxHighLevel(TEN_THOUSAND);
+hierarchical_mutex g_hmtxLowHevel(THOUSAND * 5);
+hierarchical_mutex g_hmtxOther(HUNDRED);
 
 int do_low_level_stuff() {
     TICK();
@@ -102,7 +106,7 @@ int do_low_level_stuff() {
 
 int low_level_func() {
     TICK();
-    std::lock_guard<hierarchical_mutex> lk(low_level_mutex);
+    lock_guard<hierarchical_mutex> lock(g_hmtxLowHevel);
     return do_low_level_stuff();
 }
 
@@ -112,7 +116,7 @@ void do_high_level_stuff(int some_param) {
 
 void high_level_func() {
     TICK();
-    std::lock_guard<hierarchical_mutex> lk(high_level_mutex);
+    lock_guard<hierarchical_mutex> lock(g_hmtxHighLevel);
     return do_high_level_stuff(42);
 }
 
@@ -133,19 +137,19 @@ void other_stuff() {
 
 void thread_b() {
     TICK();
-    std::lock_guard<hierarchical_mutex> lk(other_mutex);
+    lock_guard<hierarchical_mutex> lock(g_hmtxOther);
     other_stuff();
 }
 
-void hierarchical_mutex_test() {
+void test_hierarchical_mutex() {
     TICK();
-    std::thread t1(thread_a);
-    std::thread t2(thread_b);
+    thread t1(thread_a);
+    thread t2(thread_b);
     t1.join();
     t2.join();
 }
 
-void std_lock_ex_test() {
+void test_std_lock_ex() {
     TICK();
     X_EX<int> x1(some_big_object<int>(1));
     X_EX<int> x2(some_big_object<int>(2));
@@ -156,12 +160,12 @@ void prepare_data() {
     TICK();
 }
 
-std::unique_lock<std::mutex> get_lock() {
+unique_lock<mutex> get_lock() {
     TICK();
-    extern std::mutex some_mutex;
-    std::unique_lock<std::mutex> lk(some_mutex);
+    extern mutex g_mutexSome;
+    unique_lock<mutex> ulock(g_mutexSome);
     prepare_data();
-    return lk;
+    return ulock;
 }
 
 
@@ -169,14 +173,14 @@ void do_something() {
     TICK();
 }
 
-void process_data() {
+void test_process_data() {
     TICK();
-    std::unique_lock<std::mutex> lk(get_lock());
+    unique_lock<mutex> ulock(get_lock());
     do_something();
 }
 
 //3.2.8 Locking at an appropriate granularity
-std::mutex the_mutex;
+mutex           g_mtxTheOne;
 thread_sharing_data::some_class get_next_data_chunk() {
     TICK();
     return some_class();
@@ -191,22 +195,22 @@ void write_result(some_class const& data, result_type &result) {
     TICK();
 }
 
-void get_and_process_data() {
+void test_get_and_process_data() {
     TICK();
 
-    std::unique_lock<std::mutex> my_lock(the_mutex);
+    unique_lock<mutex> ulock(g_mtxTheOne);
     some_class data_to_process = get_next_data_chunk();
 
     INFO("Don`t need mutex locked across call to process()");
-    my_lock.unlock();
+    ulock.unlock();
     result_type result = process(data_to_process);
 
     INFO("Relock mutex to write result");
-    my_lock.lock();
+    ulock.lock();
     write_result(data_to_process, result);
 }
 
-void compare_operator_test() {
+void test_compare_operator() {
     TICK();
     int i1 = 1;
     int i2 = 2;
@@ -217,61 +221,61 @@ void compare_operator_test() {
 
 //3.3 Alternative facilities for protecting shared data
 //3.3.1 Protecting shared data during initialization
-std::shared_ptr<some_resource> resource_ptr = nullptr;
-void RAII_test() {
+shared_ptr<some_resource>   g_ptrResource = nullptr;
+void test_RAII() {
     TICK();
-    if (!resource_ptr) {
-        resource_ptr.reset(new some_resource);
+    if (!g_ptrResource) {
+        g_ptrResource.reset(new some_resource);
     }
-    resource_ptr->do_something();
+    g_ptrResource->do_something();
 }
 
-std::mutex resource_mutex;
-void RAII_lock_test() {
+mutex                       g_mtxResource;
+void test_RAII_lock() {
     TICK();
-    std::unique_lock<std::mutex> lk(resource_mutex);    //All threads are serialized here
-    if (!resource_ptr) {
-        resource_ptr.reset(new some_resource);  //Only the initialization needs protection
+    unique_lock<mutex> ulock(g_mtxResource);    //All threads are serialized here
+    if (!g_ptrResource) {
+        g_ptrResource.reset(new some_resource);  //Only the initialization needs protection
     }
-    lk.unlock();
-    resource_ptr->do_something();
+    ulock.unlock();
+    g_ptrResource->do_something();
 }
 
-void undefined_behaviour_with_double_checked_locking() {
+void test_RAII_lock_double_check() {
     TICK();
-    if (!resource_ptr) {
-        std::lock_guard<std::mutex> lk(resource_mutex);
-        if (!resource_ptr) {
-            resource_ptr.reset(new some_resource);
+    if (!g_ptrResource) {
+        lock_guard<mutex> lock(g_mtxResource);
+        if (!g_ptrResource) {
+            g_ptrResource.reset(new some_resource);
         }
     }
-    resource_ptr->do_something();
+    g_ptrResource->do_something();
 }
 
-std::once_flag resource_flag;
+once_flag                   g_onecResource;
 void init_resource() {
     TICK();
     INFO("Initialization is called exactly once");
-    resource_ptr.reset(new some_resource);
+    g_ptrResource.reset(new some_resource);
 }
-void once_flag_test() {
+void test_once_flag() {
     TICK();
-    std::call_once(resource_flag, init_resource);   //Initialization is called exactly once
+    call_once(g_onecResource, init_resource);   //Initialization is called exactly once
 }
 
-void call_once_test() {
+void test_call_once() {
     TICK();
     unsigned const &uNumThread = THREAD_NUM_8;
-    std::vector<std::thread> vctThreads(uNumThread);
+    vector<thread> vctThreads(uNumThread);
     for (unsigned i = 0; i < uNumThread; ++i) {
-        vctThreads[i] = std::thread(once_flag_test);
+        vctThreads[i] = thread(test_once_flag);
     }
     for (unsigned i = 0; i < uNumThread; ++i) {
         vctThreads[i].join();
     }
 }
 
-void Connection_call_once_test() {
+void test_connection_call_once() {
     TICK();
     connection_info conn_info;
     Connection conn(conn_info);
@@ -283,20 +287,31 @@ void Connection_call_once_test() {
     data_packet const &data4 = conn.receive_data();
 }
 
-void Connection_concurrency_call_once_test() {
+void test_connection_concurrency_call_once() {
     TICK();
     connection_info conn_info;
     Connection conn(conn_info);
     data_packet data1;
     data_packet data2;
-    std::thread t1(&Connection::send_data, &conn, data1);
-    std::thread t2(&Connection::send_data, &conn, data2);
-    std::thread t3(&Connection::receive_data, &conn);
-    std::thread t4(&Connection::receive_data, &conn);
+    thread t1(&Connection::send_data, &conn, data1);
+    thread t2(&Connection::send_data, &conn, data2);
+#if 0
+    thread t3(&Connection::receive_data, &conn);
+    thread t4(&Connection::receive_data, &conn);
+#else
+    future<data_packet> datePacket3_f = async(&Connection::receive_data, &conn);
+    future<data_packet> datePacket4_f = async(&Connection::receive_data, &conn);
+#endif
+
     t1.join();
     t2.join();
+#if 0
     t3.join();
     t4.join();
+#else
+    auto const& dataPacket3 = datePacket3_f.get();
+    auto const& dataPacket4 = datePacket4_f.get();
+#endif
 }
 
 my_class& get_my_class_instance() {

@@ -19,33 +19,31 @@ namespace thread_sharing_data {
 //3.2 Protecting shared data with mutexes
 //3.2.1 Using mutexes in C++
 //Listing 3.1 Protecting a list with a mutex
-void add_to_list(int new_value);
-bool list_contains(int value_to_find);
 
 //3.2.2 Structing code for protecting shared data
 //Listing 3.2 Accidentally passing out a reference to protected data
 class some_data {
     int a;
-    std::string b;
+    string b;
 public:
     void do_something() {}
 };
 class data_wrapper {
-    some_data data;
-    std::mutex m;
+    some_data   m_data;
+    mutex       m_mutex;
 public:
     template<typename Function>
     void process_data(Function func) {
         TICK();
-        std::lock_guard<std::mutex> l(m);
-        func(data); //Pass "protected" data to user-supplied function!!!
+        lock_guard<mutex> lock(m_mutex);
+        func(m_data); //Pass "protected" data to user-supplied function!!!
     }
 };
-void foo();
+void test_foo();
 
 //3.2.3 Spotting race conditions inherent in interfaces
-//Listing 3.3 The interface to the std::stack container adapter
-template<typename T, typename Container = std::deque<T>>
+//Listing 3.3 The interface to the stack container adapter
+template<typename T, typename Container = deque<T>>
 class stack {
     Container container;
 
@@ -95,12 +93,12 @@ public:
     }
 };
 
-void stack_test();
+void test_stack();
 
 //Listing 3.4 An outline class defination for a thread-safe stack
 
 //Listing 3.5 A fleshed-out class definition for a thread-safe stack
-struct empty_stack : std::exception {
+struct empty_stack : exception {
     const char* what() const throw() {
         TICK();
         return "empty_stack";
@@ -109,66 +107,66 @@ struct empty_stack : std::exception {
 
 template<typename T>
 class thread_safe_stack {
-    std::stack<T> data;
-    mutable std::mutex m;
+    stack<T>        g_stkData;
+    mutable mutex   g_mtxData;
 
 public:
     thread_safe_stack() {}
-    thread_safe_stack(const thread_safe_stack &other) : data(), m() {
+    thread_safe_stack(const thread_safe_stack &other) : g_stkData(), g_mtxData() {
         TICK();
-        std::lock_guard<std::mutex> lock(other.m);
-        data = other.data;  //Copy performed in constructor body
+        lock_guard<mutex> lock(other.g_mtxData);
+        g_stkData = other.g_stkData;  //Copy performed in constructor body
     }
     thread_safe_stack& operator=(const thread_safe_stack &) = delete; //Assignment operator is deleted
 
     void push(T new_value) {
         TICK();
-        std::lock_guard<std::mutex> lock(m);
-        data.push(new_value);
+        lock_guard<mutex> lock(g_mtxData);
+        g_stkData.push(new_value);
     }
-    std::shared_ptr<T> pop() {
+    shared_ptr<T> pop() {
         TICK();
-        std::lock_guard<std::mutex> lock(m);
-        if (data.empty()) { //Check for empty before trying to pop value
+        lock_guard<mutex> lock(g_mtxData);
+        if (g_stkData.empty()) { //Check for empty before trying to pop value
             throw empty_stack();
         }
-        std::shared_ptr<T> const res(std::make_shared<T>(data.top()));  //Allcate return value before modifying stack
-        data.pop();
-        return res;
+        shared_ptr<T> const ptrRes(make_shared<T>(g_stkData.top()));  //Allcate return value before modifying stack
+        g_stkData.pop();
+        return ptrRes;
     }
 #if 0//If there are some override functions, the thread object init with it, something going wrong when compiling.
     void pop(T &value) {
         TICK();
-        std::lock_guard<std::mutex> lock(m);
-        if (data.empty()) {
+        lock_guard<mutex> lock(g_mtxData);
+        if (g_stkData.empty()) {
             throw empty_stack();
         }
-        value = data.top();
-        data.pop();
+        value = g_stkData.top();
+        g_stkData.pop();
     }
 #endif
     bool empty() const {
         TICK();
-        std::lock_guard<std::mutex> lock(m);
-        return data.empty();
+        lock_guard<mutex> lock(g_mtxData);
+        return g_stkData.empty();
     }
 };
 
-void thread_safe_stack_test();
+void test_thread_safe_stack();
 
 //3.2.4 Deadlock: the problem and a solution
-//Listing 3.6 Using std::lock() and std::lock_guard in a swap operation
+//Listing 3.6 Using lock() and lock_guard in a swap operation
 template<typename T>
 class some_big_object {
-    T data;
+    T   m_data;
 
 public:
-    explicit some_big_object(T val) : data(val) {}
+    explicit some_big_object(T val) : m_data(val) {}
     void set_data(T const &val) {
-        data = val;
+        m_data = val;
     }
     T get_data() {
-        return data;
+        return m_data;
     }
 };
 
@@ -183,64 +181,70 @@ void swap(some_big_object<T> &lhs, some_big_object<T> &rhs) {
 template<typename T>
 class X {
 private:
-    some_big_object<T> some_detail;
-    std::mutex m;
+    some_big_object<T>  m_tSomeDetail;
+    mutex               m_mtxData;
 public:
-    explicit X(some_big_object<T> const &sd) :some_detail(sd) {}
+    explicit X(some_big_object<T> const &sd) :m_tSomeDetail(sd) {}
 
     friend void swap(X<T> &lhs, X<T> &rhs) {
         TICK();
         if (&lhs == &rhs) {
             return;
         }
-        std::lock(lhs.m, rhs.m);
-        std::lock_guard<std::mutex> lock_a(lhs.m, std::adopt_lock);
-        std::lock_guard<std::mutex> lock_b(rhs.m, std::adopt_lock);
-        swap(lhs.some_detail, rhs.some_detail);
+        std::lock(lhs.m_mtxData, rhs.m_mtxData);
+        lock_guard<mutex> lock_a(lhs.m_mtxData, adopt_lock);
+        lock_guard<mutex> lock_b(rhs.m_mtxData, adopt_lock);
+        swap(lhs.m_tSomeDetail, rhs.m_tSomeDetail);
     }
 };
 
-void std_lock_test();
+void test_std_lock();
 
 //3.2.5 Further guidelines for avoiding deadlock
+//Listing 3.7 Using a lock hierarchy to prevent deadlock
 //Listing 3.8 A simple hierarchical mutex
 class hierarchical_mutex {
-    std::mutex internal_mutex;
-    unsigned long const hierachy_value;
-    unsigned long previous_hierarchy_value;
-    static thread_local unsigned long this_thread_hierarchy_value;
+    mutex                               m_mtxInternal;
+    unsigned long const                 m_uHierachy;
+    unsigned long                       m_uRreviousHierarchy;
+    static thread_local unsigned long   m_uThisThreadHierarchy_tl;//something wrong with 'thread_local' in vs2015.
 
     void check_for_hierarchy_violation() {
         TICK();
-        if (this_thread_hierarchy_value <= hierachy_value) {
-            INFO("mutex hierarchy violated");
-            throw std::logic_error("mutex hierarchy violated");
+        DEBUG("%d, %d, %d", m_uHierachy, m_uRreviousHierarchy, m_uThisThreadHierarchy_tl);
+        if (m_uThisThreadHierarchy_tl <= m_uHierachy) {
+            ERR("mutex hierarchy violated");
+            throw logic_error("mutex hierarchy violated");
         }
     }
 
     void update_hierarchy_value() {
         TICK();
-        previous_hierarchy_value = this_thread_hierarchy_value;
-        this_thread_hierarchy_value = hierachy_value;
+        DEBUG("%d, %d, %d", m_uHierachy, m_uRreviousHierarchy, m_uThisThreadHierarchy_tl);
+        m_uRreviousHierarchy = m_uThisThreadHierarchy_tl;
+        m_uThisThreadHierarchy_tl = m_uHierachy;
+        INFO("%d, %d, %d", m_uHierachy, m_uRreviousHierarchy, m_uThisThreadHierarchy_tl);
     }
 
 public:
-    explicit hierarchical_mutex(unsigned long value) : hierachy_value(value), previous_hierarchy_value(0) {}
+    explicit hierarchical_mutex(unsigned long value) : m_uHierachy(value), m_uRreviousHierarchy(0) {}
     void lock() {
         TICK();
         check_for_hierarchy_violation();
-        internal_mutex.lock();
+        m_mtxInternal.lock();
         update_hierarchy_value();
     }
     void unlock() {
         TICK();
-        this_thread_hierarchy_value = previous_hierarchy_value;
-        internal_mutex.unlock();
+        DEBUG("%d, %d, %d", m_uHierachy, m_uRreviousHierarchy, m_uThisThreadHierarchy_tl);
+        m_uThisThreadHierarchy_tl = m_uRreviousHierarchy;
+        m_mtxInternal.unlock();
+        INFO("%d, %d, %d", m_uHierachy, m_uRreviousHierarchy, m_uThisThreadHierarchy_tl);
     }
     bool try_lock() {
         TICK();
         check_for_hierarchy_violation();
-        if (!internal_mutex.try_lock()) {
+        if (!m_mtxInternal.try_lock()) {
             return false;
         }
         update_hierarchy_value();
@@ -248,70 +252,54 @@ public:
     }
 };
 
-//Listing 3.7 Using a lock hierarchy to prevent deadlock
-int do_low_level_stuff();
-int low_level_func();
-void do_high_level_stuff(int some_param);
-void high_level_func();
-void thread_a();
-void do_other_stuff();
-void other_stuff();
-void thread_b();
+void test_hierarchical_mutex();
 
-void hierarchical_mutex_test();
-
-//3.2.6 Flexible locking with std::unique_lock
-//Listing 3.9 Using std::lock() and std::unique_lock in a swap oopration
+//3.2.6 Flexible locking with unique_lock
+//Listing 3.9 Using lock() and unique_lock in a swap oopration
 template<typename T>
 class X_EX {
 private:
-    some_big_object<T> some_detail;
-    std::mutex m;
+    some_big_object<T>  m_tSomeDetail;
+    mutex               m_mtxData;
 public:
-    explicit X_EX(some_big_object<T> const &sd) : some_detail(sd) {}
+    explicit X_EX(some_big_object<T> const &sd) : m_tSomeDetail(sd) {}
     friend void swap(X_EX<T> &lhs, X_EX<T> &rhs) {
         TICK();
         if (&lhs == &rhs) {
             return;
         }
 
-        std::unique_lock<std::mutex> lock_a(lhs.m, std::defer_lock);
-        std::unique_lock<std::mutex> lock_b(rhs.m, std::defer_lock); //std::defer_lock leaves mutexes unlocked
-        std::lock(lock_a, lock_b);  //Mutexes are locked here
-        swap(lhs.some_detail, rhs.some_detail);
+        unique_lock<mutex> ulock_l(lhs.m_mtxData, defer_lock);
+        unique_lock<mutex> ulock_r(rhs.m_mtxData, defer_lock); //defer_lock leaves mutexes unlocked
+        std::lock(ulock_l, ulock_r);  //Mutexes are locked here
+        swap(lhs.m_tSomeDetail, rhs.m_tSomeDetail);
     }
 };
 
-void std_lock_ex_test();
+void test_std_lock_ex();
 
 //3.2.7 Transferring mutex ownership between scopes
-void prepare_data();
-std::unique_lock<std::mutex> get_lock();
-void do_something();
-void process_data();
+void test_process_data();
 
 //3.2.8 Locking at an appropriate granularity
 class some_class {};
-some_class get_next_data_chunk();
 typedef unsigned result_type;
-result_type process(some_class data);
-void write_result(some_class const& data, result_type &result);
-void get_and_process_data();
+void test_get_and_process_data();
 
 //Listing 3.10 Locking one mutex at a time in a comparison operator
 template<typename T>
 class Y {
 private:
-    T some_detail;
-    mutable std::mutex m;
+    T               g_tSomeDetail;
+    mutable mutex   g_mtxData;
 
     T get_detail() const {
         TICK();
-        std::lock_guard<std::mutex> lock_a(m);
-        return some_detail;
+        lock_guard<mutex> lock(g_mtxData);
+        return g_tSomeDetail;
     }
 public:
-    explicit Y(T sd) :some_detail(sd) {}
+    explicit Y(T sd) :g_tSomeDetail(sd) {}
     friend bool operator==(Y<T> const &lhs, Y<T> const &rhs) {
         TICK();
         if (&lhs == &rhs) {
@@ -323,7 +311,7 @@ public:
     }
 };
 
-void compare_operator_test();
+void test_compare_operator();
 
 //3.3 Alternative facilities for protecting shared data
 //3.3.1 Protecting shared data during initialization
@@ -333,14 +321,13 @@ public:
         TICK();
     }
 };
-void RAII_test();
-void RAII_lock_test();
-void undefined_behaviour_with_double_checked_locking();
-void init_resource();
-void once_flag_test();
-void call_once_test();
+void test_RAII();
+void test_RAII_lock();
+void test_RAII_lock_double_check();
 
-//Listing 3.12 Threads-safe lazy initialization of a class member using std::call_once
+void test_call_once();
+
+//Listing 3.12 Threads-safe lazy initialization of a class member using call_once
 class data_packet {};
 class connection_info {
 public:
@@ -366,32 +353,32 @@ public:
 
 class Connection {
 private:
-    connection_manager conn_mgr;
-    connection_info connection_details;
-    connection_handle connection;
-    std::once_flag connection_init_flag;
+    connection_manager  m_connectionMgr;
+    connection_info     m_connectionDetails;
+    connection_handle   m_connectionHandle;
+    once_flag           m_onceConnectionInitFlag;
 
     void open_connection() {
         TICK();
         INFO("Initialization is called exactly once");
-        connection = conn_mgr.open(connection_details);
+        m_connectionHandle = m_connectionMgr.open(m_connectionDetails);
     }
 public:
-    explicit Connection(connection_info const &connection_details_) : connection_details(connection_details_) {}
+    explicit Connection(connection_info const &connection_details_) : m_connectionDetails(connection_details_) {}
     void send_data(data_packet const &data) {
         TICK();
-        std::call_once(connection_init_flag, &Connection::open_connection, this);
-        connection.send_data(data);
+        call_once(m_onceConnectionInitFlag, &Connection::open_connection, this);
+        m_connectionHandle.send_data(data);
     }
     data_packet receive_data() {
         TICK();
-        std::call_once(connection_init_flag, &Connection::open_connection, this);
-        return connection.receive_data();
+        call_once(m_onceConnectionInitFlag, &Connection::open_connection, this);
+        return m_connectionHandle.receive_data();
     }
 };
 
-void Connection_call_once_test();
-void Connection_concurrency_call_once_test();
+void test_connection_call_once();
+void test_connection_concurrency_call_once();
 
 class my_class {};
 my_class& get_my_class_instance();
