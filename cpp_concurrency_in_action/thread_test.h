@@ -12,10 +12,9 @@
 
 namespace thread_test {
 
-void hello_test();
+void test_hello();
 
-void hello();
-void hello_concurrency();
+void test_hello_concurrency();
 
 }//namespace thread_test
 

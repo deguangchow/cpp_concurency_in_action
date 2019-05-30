@@ -13,54 +13,42 @@
 namespace thread_manage {
 
 //2.1.1 Launching a thread
-void do_some_work();
-void do_something();
-void do_something_else();
 class background_task {
 public:
-    void operator()() const {
-        do_something();
-        do_something_else();
-    }
+    void operator()() const;
 };
-void launching_thread_test();
+void test_launching_thread();
 
 
 //Listing 2.1: A function that returns while a thread still has access to local variables.
-void do_something(int &i);
 typedef struct func {
     int &i;
     func(int &i_) :i(i_) {}
-    void operator()() {
-        for (unsigned j = 0; j < MILLION; ++j) {
-            do_something(i);//Potential access to dangling reference.
-        }
-    }
+    void operator()();
 }FUNC;
-typedef std::shared_ptr<FUNC> ptrFUNC;
-void oops();
+typedef shared_ptr<FUNC> FUNC_PTR;
+void test_oops();
 
 //2.1.2 Waiting for a thread to complete
 
 //2.1.3 Waiting in exceptional circumstances
 //Listing 2.2 Waiting for a thread to finish
-void do_something_in_current_thread();
-void f_oops_exception();
+void test_oops_exception();
 
 //Listing 2.3 Using RAII to wait for a thread to complete
-class thread_gurad {
-    std::thread &t;
+class thread_guard {
+    thread          &m_thread;
 public:
-    explicit thread_gurad(std::thread &t_) : t(t_) { }
-    ~thread_gurad() {
-        if (t.joinable()) {
-            t.join();
+    explicit thread_guard(thread &t_) : m_thread(t_) { }
+    ~thread_guard() {
+        if (m_thread.joinable()) {
+            m_thread.join();
         }
     }
-    thread_gurad(thread_gurad const&) = delete;
-    thread_gurad& operator=(thread_gurad const&) = delete;
+    thread_guard(thread_guard const&) = delete;
+    thread_guard& operator=(thread_guard const&) = delete;
 };
-void f_thread_guard();
+void test_thread_guard();
 
 
 //2.1.4 Running threads in the background
@@ -79,38 +67,27 @@ public:
     explicit user_command(DOC_OPREA_TYPE const &type_) :type(type_) {}
     ~user_command() {}
 };
-void open_document_and_display(std::string const &filename);
-bool done_editing();
-user_command const get_user_input();
-std::string const get_filename_from_user(); //tips: don`t try to return a refrence, or you will get noting but an error:
-                                            //(error) Reference to temporary returned.
-void process_user_input(user_command const &cmd);
-void edit_document(std::string const &filename);
-void edit_document_test();
+void test_edit_document();
 
 //2.2 Passing arguments to a thread function
-void f_passing_argument_test(int i, std::string const& s);
-void oops(int some_param);
-void not_oops(int some_param);
+void test_oops(int some_param);
+void test_not_oops(int some_param);
 
 typedef unsigned widget_id;
 typedef unsigned widget_data;
-void update_date_for_widget(widget_id w, widget_data &data);
-void process_widget_data(widget_data const &data);
-void display_status();
-void oops_again(widget_id w);
+void test_oops_again(widget_id w);
 
 class X {
 public:
     void do_lengthy_work() { TICK(); }
 };
-void x_test();
+void test_x();
 
 class X1 {
 public:
     void do_lengthy_work(int num) { TICK(); }
 };
-void x1_test();
+void test_x1();
 
 struct big_object {
     unsigned data;
@@ -119,89 +96,78 @@ struct big_object {
         data = data_;
     }
 };
-void process_big_object(std::unique_ptr<big_object>);
-void move_test();
+void test_move();
 
 //2.3 Transferring ownship of a thread
-void some_function();
-void some_other_function();
-void thread_move_test();
+void test_thread_move();
 
-//Listing 2.5 Returning a std::thread form a function
-std::thread f();
-void some_other_function_1(int num);
-std::thread g();
-void g_test();
-void f(std::thread t);
-void g_1();
+//Listing 2.5 Returning a thread form a function
+void test_get_thread();
+void test_get_thread1();
 
 //Listing 2.6 scoped_thread and example usage
 class scoped_thread {
-    std::thread t;
+    thread          m_thread;
 public:
-    explicit scoped_thread(std::thread t_) :t(std::move(t_)) {
+    explicit scoped_thread(thread t_) :m_thread(move(t_)) {
         TICK();
-        if (!t.joinable()) {
-            throw std::logic_error("No thread");
+        if (!m_thread.joinable()) {
+            throw logic_error("No thread");
         }
     }
     ~scoped_thread() {
         TICK();
-        t.join();
+        m_thread.join();
     }
     //scoped_thread(scoped_thread const&) = delete;
     scoped_thread& operator=(scoped_thread const&) = delete;
 };
-void scopt_thread_test();
+void test_scopt_thread();
 
 //Listing 2.7 Spawn some threads and wait for them to finish
-void do_work(unsigned id);
-void f_spawn_threads();
+void test_spawn_threads();
 
 //2.4 Choosing the number of threads at runtime
-//Listing 2.8 A naive parallel version of std::accumulate
+//Listing 2.8 A naive parallel version of accumulate
 template<typename Iterator, typename T>
 struct accumulate_block {
     void operator()(Iterator first, Iterator last, T &result) {
         TICK();
-        result = std::accumulate(first, last, result);
+        result = accumulate(first, last, result);
     }
 };
 template<typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
     TICK();
 
-    unsigned long const length = std::distance(first, last);
-    if (!length) {
+    unsigned long const LENGTH = distance(first, last);
+    if (!LENGTH) {
         return init;
     }
 
-    unsigned long const min_per_thread = 25;
-    unsigned long const max_threads = (length + min_per_thread - 1) / min_per_thread;
-    unsigned long const num_threads = std::min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, max_threads);
-    unsigned long const block_size = length / num_threads;
-    std::vector<T> results(num_threads);
-    std::vector<std::thread> threads(num_threads - 1);
+    unsigned long const MIN_PER_THREAD = 25;
+    unsigned long const MAX_THREADS = (LENGTH + MIN_PER_THREAD - 1) / MIN_PER_THREAD;
+    unsigned long const NUM_THREADS = min(HARDWARE_CONCURRENCY != 0 ? HARDWARE_CONCURRENCY : 2, MAX_THREADS);
+    unsigned long const BLOCK_SIZE = LENGTH / NUM_THREADS;
+    vector<T>           vctResults(NUM_THREADS);
+    vector<thread>      vctThreads(NUM_THREADS - 1);
 
-    Iterator block_start = first;
-    for (unsigned i = 0; i < num_threads - 1; ++i) {
-        Iterator block_end = block_start;
-        std::advance(block_end, block_size);
-        threads[i] = std::thread(accumulate_block<Iterator, T>(), block_start, block_end, std::ref(results[i]));
-        block_start = block_end;
+    Iterator            posBlockStart = first;
+    for (unsigned i = 0; i < NUM_THREADS - 1; ++i) {
+        Iterator posBlockEnd = posBlockStart;
+        advance(posBlockEnd, BLOCK_SIZE);
+        vctThreads[i] = thread(accumulate_block<Iterator, T>(), posBlockStart, posBlockEnd, ref(vctResults[i]));
+        posBlockStart = posBlockEnd;
     }
-    accumulate_block<Iterator, T>()(block_start, last, results[num_threads - 1]);
-    std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
-    return std::accumulate(results.begin(), results.end(), init);
+    accumulate_block<Iterator, T>()(posBlockStart, last, vctResults[NUM_THREADS - 1]);
+    for_each(vctThreads.begin(), vctThreads.end(), mem_fn(&thread::join));
+    return accumulate(vctResults.begin(), vctResults.end(), init);
 }
 
-void parallel_accumulate_test();
+void test_parallel_accumulate();
 
 //2.5 Identifying threads
-void do_master_thread_work();
-void do_common_work();
-void some_core_part_of_algorithm(std::thread::id master_thread);
-void identifying_threads_test();
+void test_identifying_threads();
 
 
 }//namespace thread_manage

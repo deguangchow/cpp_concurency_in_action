@@ -25,29 +25,29 @@ int main() {
     TICK();
 
 #if 0//chapter1
-    thread_test::hello_test();
-    thread_test::hello_concurrency();
+    thread_test::test_hello();
+    thread_test::test_hello_concurrency();
 #endif
 
 #if 0//chapter2
-    thread_manage::launching_thread_test();
-    thread_manage::oops();
-    thread_manage::f_oops_exception();
-    thread_manage::f_thread_guard();
-    thread_manage::edit_document_test();
-    thread_manage::oops(42);
-    thread_manage::not_oops(42);
-    thread_manage::oops_again(42);
-    thread_manage::x_test();
-    thread_manage::x1_test();
-    thread_manage::move_test();
-    thread_manage::thread_move_test();
-    thread_manage::g_test();
-    thread_manage::g_1();
-    thread_manage::scopt_thread_test();
-    thread_manage::f_spawn_threads();
-    thread_manage::parallel_accumulate_test();
-    thread_manage::identifying_threads_test();
+    thread_manage::test_launching_thread();
+    thread_manage::test_oops();
+    thread_manage::test_oops_exception();
+    thread_manage::test_thread_guard();
+    thread_manage::test_edit_document();
+    thread_manage::test_oops(42);
+    thread_manage::test_not_oops(42);
+    thread_manage::test_oops_again(42);
+    thread_manage::test_x();
+    thread_manage::test_x1();
+    thread_manage::test_move();
+    thread_manage::test_thread_move();
+    thread_manage::test_get_thread();
+    thread_manage::test_get_thread1();
+    thread_manage::test_scopt_thread();
+    thread_manage::test_spawn_threads();
+    thread_manage::test_parallel_accumulate();
+    thread_manage::test_identifying_threads();
 #endif
 
 #if 0//chapter3

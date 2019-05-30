@@ -11,19 +11,19 @@
 
 namespace thread_test {
 
-void hello_test() {
+void test_hello() {
     TICK();
-    std::cout << "Hello World" << std::endl;
+    DEBUG("Hello World");
 }
 
 void hello() {
     TICK();
-    std::cout << "Hello Concurrent world" << std::endl;
+    DEBUG("Hello Concurrent world");
 }
 
-void hello_concurrency() {
+void test_hello_concurrency() {
     TICK();
-    std::thread t(hello);
+    thread t(hello);
     t.join();
 }
 
