@@ -13,18 +13,11 @@
 namespace sync_conc_opera {
 
 //4.1 Waiting for an event or other condition
-void wait_for_flag();
+void test_wait_for_flag();
 
 //4.1.1 Waiting for a condition with condition variables
 //Listing 4.1 Waiting for data to process with a condition_variable
-class data_chunk {};
-bool more_data_to_prepare();
-data_chunk prepare_data();
-void data_preparation_thread();
-void process_data(data_chunk data);
-bool is_last_chunk(data_chunk data);
-void data_processing_thread();
-void wait_for_condition_variable();
+void test_wait_for_condition_variable();
 
 //4.1.2 Building a thread-safe queue with condition variables
 //Listing 4.2 queue interface
@@ -92,75 +85,71 @@ public:
 template<typename T>
 class threadsafe_queue {
 private:
-    mutable mutex mut; //The mutex must be mutable
-    std::queue<T> data_queue;
-    condition_variable data_cond;
+    mutable mutex           m_mtxData; //The mutex must be mutable
+    std::queue<T>           m_queueData;
+    condition_variable      m_cvData;
 
 public:
-    threadsafe_queue() : mut(), data_queue(), data_cond() {}
-    threadsafe_queue(threadsafe_queue const &other) : mut(), data_queue(), data_cond() {
-        lock_guard<mutex> lk(other.mut);
-        data_queue = other.data_queue;
+    threadsafe_queue() : m_mtxData(), m_queueData(), m_cvData() {}
+    threadsafe_queue(threadsafe_queue const &other) : m_mtxData(), m_queueData(), m_cvData() {
+        lock_guard<mutex> lk(other.m_mtxData);
+        m_queueData = other.m_queueData;
     }
     threadsafe_queue& operator=(threadsafe_queue const&) = delete;  //Disallow assignment for simplicity
 
     void push(T new_value) {
         TICK();
-        lock_guard <mutex> lk(mut);
-        data_queue.push(new_value);
-        data_cond.notify_one();
+        lock_guard <mutex> lock(m_mtxData);
+        m_queueData.push(new_value);
+        m_cvData.notify_one();
     }
     bool try_pop(T &value) {
         TICK();
-        lock_guard<mutex> lk(mut);
-        if (data_queue.empty()) {
+        lock_guard<mutex> lock(m_mtxData);
+        if (m_queueData.empty()) {
             return false;
         }
-        value = data_queue.front();
-        data_queue.pop();
+        value = m_queueData.front();
+        m_queueData.pop();
         return true;
     }
     shared_ptr<T> try_pop() {
         TICK();
-        lock_guard<mutex> lk(mut);
-        if (data_queue.empty()) {
+        lock_guard<mutex> lock(m_mtxData);
+        if (m_queueData.empty()) {
             return make_shared<T>();
         }
-        shared_ptr<T> res(make_shared<T>(data_queue.front()));
-        data_queue.pop();
-        return res;
+        shared_ptr<T> ptrRes(make_shared<T>(m_queueData.front()));
+        m_queueData.pop();
+        return ptrRes;
     }
     void wait_and_pop(T &value) {
         TICK();
-        unique_lock<mutex> lk(mut);
-        data_cond.wait(lk, [this] {return !data_queue.empty(); });
-        value = data_queue.front();
-        data_queue.pop();
+        unique_lock<mutex> ulock(m_mtxData);
+        m_cvData.wait(ulock, [this] {return !m_queueData.empty(); });
+        value = m_queueData.front();
+        m_queueData.pop();
     }
     shared_ptr<T> wait_and_pop() {
         TICK();
-        unique_lock<mutex> lk(mut);
-        data_cond.wait(lk, [this] {return !data_queue.empty(); });
-        shared_ptr<T> res(make_shared<T>(data_queue.front()));
-        data_cond.pop();
-        return res;
+        unique_lock<mutex> ulock(m_mtxData);
+        m_cvData.wait(ulock, [this] {return !m_queueData.empty(); });
+        shared_ptr<T> ptrRes(make_shared<T>(m_queueData.front()));
+        m_cvData.pop();
+        return ptrRes;
     }
     bool empty() const {
-        lock_guard<mutex> lc(mut);
-        return data_queue.empty();
+        lock_guard<mutex> lock(m_mtxData);
+        return m_queueData.empty();
     }
 };
 
-void data_preparation_safe_thread();
-void data_processing_safe_thread();
-void threadsafe_queue_test();
+void test_threadsafe_queue();
 
 //4.2 Waiting for one-off events with futures
 //4.2.1 Returning values from background tasks.
 //Listing 4.6 Using future to get the return value of an asynchronous task
-int find_the_answer_to_ltuae();
-void do_other_stuff();
-void future_async_test();
+void test_future_async();
 
 //Listing 4.7 Passing arguments to a function with async
 struct X {
@@ -190,7 +179,7 @@ public:
         TICK();
     }
 };
-void future_async_struct_test();
+void test_future_async_struct();
 
 //4.2.2 Associating a task with a future
 //Listing 4.8 Partial class definaition for a specialization of packaged_task<>
@@ -211,25 +200,19 @@ public:
 #endif
 
 //Listing 4.9 Running code on a GUI thread using packaged_task
-
-bool gui_shutdown_message_received();
-void get_and_process_gui_message();
-void gui_thread();
-template<typename Func>
-future<void> post_task_for_gui_thread(Func f);
-void packaged_task_test();
+void test_packaged_task();
 
 //4.2.3 Making ()promises
 //Listing 4.10 Handling multiple connections from a single thread using promise
 class payload_type {};
 struct data_packet {
-    unsigned id;
-    payload_type payload;
+    unsigned        id;
+    payload_type    payload;
 };
 struct outgoing_packet {
-    unsigned id;
-    payload_type payload;
-    promise<bool> promise;
+    unsigned        id;
+    payload_type    payload;
+    promise<bool>   promise;
 };
 class Connection {
 public:
@@ -259,88 +242,79 @@ public:
         TICK();
     }
 };
-typedef shared_ptr<Connection> Connection_ptr;
-typedef set<Connection_ptr> SetConnection;
-typedef SetConnection::iterator Connection_iterator;
-bool done(SetConnection const &connections);
-void process_connections(SetConnection &connections);
-void process_connections_test();
+typedef shared_ptr<Connection>      Connection_ptr;
+typedef set<Connection_ptr>         SetConnection;
+typedef SetConnection::iterator     Connection_iterator;
+void test_process_connections();
 
 //4.2.4 Saving an exception for the future
-double square_root(double x);
-void future_exception_test();
+void test_future_exception();
 
-double calcuate_value();
-void promise_exception();
-void promise_exception_test();
+void test_promise_exception();
 
 //4.3 Waiting with a time limit
 //4.3.1 Clocks
 //4.3.2 Durations
-int some_task();
-void do_something_with(int const &val);
-void durations_test();
+void test_durations();
 //4.3.3 Time points
-void do_something();
-void time_points_test();
+void test_time_points();
 //Listing 4.11 Waiting for a condition variable with a timeout
-bool wait_until_loop();
-void condition_variable_timeout_test();
+void test_condition_variable_timeout();
 
 //4.4 Using synchronization of operations to simplify code
 //4.4.1 Funcional programming with futures
 //Listing 4.12 A sequential implementation of Quicksort
 template<typename T>
-list<T> sequential_quick_sort(list<T> input) {
+list<T> sequential_quick_sort(list<T> lstInput) {
     TICK();
-    if (input.empty()) {
-        return input;
+    if (lstInput.empty()) {
+        return lstInput;
     }
-    list<T> result;
-    result.splice(result.begin(), input, input.begin());
-    T const &pivot = *result.begin();
+    list<T> lstResult;
+    lstResult.splice(lstResult.begin(), lstInput, lstInput.begin());
+    T const &tCompare = *lstResult.begin();
 
-    auto divide_point = partition(input.begin(), input.end(),
-        [&pivot](T const &t) {return t < pivot; });
+    auto posDivide = partition(lstInput.begin(), lstInput.end(),
+        [&tCompare](T const &t) {return t < tCompare; });
 
-    list<T> lower_part;
-    lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
+    list<T> lstLowerPart;
+    lstLowerPart.splice(lstLowerPart.end(), lstInput, lstInput.begin(), posDivide);
 
-    auto new_lower(sequential_quick_sort(move(lower_part)));
-    auto new_higher(sequential_quick_sort(move(input)));
-    result.splice(result.end(), new_higher);
-    result.splice(result.begin(), new_lower);
-    return result;
+    auto lstNewLower(sequential_quick_sort(move(lstLowerPart)));
+    auto lstNewHigher(sequential_quick_sort(move(lstInput)));
+    lstResult.splice(lstResult.end(), lstNewHigher);
+    lstResult.splice(lstResult.begin(), lstNewLower);
+    return lstResult;
 }
 
-void sequential_quick_sort_test();
+void test_sequential_quick_sort();
 
 //Listing 4.13 Parallel Quicksort using futures
 template<typename T>
-list<T> parallel_quick_sort(list<T> input) {
+list<T> parallel_quick_sort(list<T> lstInput) {
     TICK();
-    if (input.empty()) {
-        return input;
+    if (lstInput.empty()) {
+        return lstInput;
     }
 
-    list<T> result;
-    result.splice(result.begin(), input, input.begin());
-    T const &pivot = *result.begin();
-    auto divide_point = partition(input.begin(), input.end(),
-        [&pivot](T const &t) {return t < pivot; });
+    list<T> lstResult;
+    lstResult.splice(lstResult.begin(), lstInput, lstInput.begin());
+    T const &tCompare = *lstResult.begin();
+    auto posDivide = partition(lstInput.begin(), lstInput.end(),
+        [&tCompare](T const &t) {return t < tCompare; });
 
-    list<T> lower_part;
-    lower_part.splice(lower_part.end(), input, input.begin(), divide_point);
+    list<T> lstLowerPart;
+    lstLowerPart.splice(lstLowerPart.end(), lstInput, lstInput.begin(), posDivide);
 
-    future<list<T>> new_lower(async(&parallel_quick_sort<T>, move(lower_part)));
-    auto new_higher(move(parallel_quick_sort(input)));
+    future<list<T>> lstNewLower_f(async(&parallel_quick_sort<T>, move(lstLowerPart)));
+    auto            lstNewHigher(move(parallel_quick_sort(lstInput)));
 
-    result.splice(result.end(), new_higher);
-    result.splice(result.begin(), new_lower.get());
-    return result;
+    lstResult.splice(lstResult.end(), lstNewHigher);
+    lstResult.splice(lstResult.begin(), lstNewLower_f.get());
+    return lstResult;
 }
 
-void parallel_quick_sort_test();
+void test_parallel_quick_sort();
 
 //Listing 4.14 A sample implementation of spawn_task
 #if 0//original sample
@@ -348,28 +322,35 @@ template<typename F, typename A>
 future<typename result_of<F(A&&)>::type> spawn_task(F &&f, A &&a) {
     TICK();
     typedef result_of<F(A&&)>::type result_type;
-    packaged_task<result_type(A&&)> task(move(f));
-    future<result_type> res(task.get_future());
-    thread t(move(task), move(a));
+    packaged_task<result_type(A&&)> ptask(move(f));
+    future<result_type> result_f(ptask.get_future());
+    thread t(move(ptask), move(a));
     t.detach();
-    return res;
+    return result_f;
 }
-#else//extended sample
+#elseif 0//extended sample
 template<typename F, typename...Args>
 auto spawn_task(F &&f, Args &&...args)->future<typename result_of<F(Args...)>::type> {
     TICK();
     using result_type = typename result_of<F(Args...)>::type;
-    packaged_task<result_type(Args...)> task(move(f));
-    future<result_type> res(task.get_future());
-    thread t(move(task), forward<Args>(args)...);
+    packaged_task<result_type(Args...)> ptask(move(f));
+    future<result_type> result_f(ptask.get_future());
+    thread t(move(ptask), forward<Args>(args)...);
     t.detach();
-    return res;
+    return result_f;
+}
+#else//prefer this type to spawn task!
+template<typename F, typename...Args, typename result_type = result_of<F(Args...)>::type>
+future<result_type> spawn_task(F &&f, Args &&...args) {
+    TICK();
+    packaged_task<result_type(Args...)> ptask(move(f));
+    future<result_type> result_f(ptask.get_future());
+    thread t(move(ptask), forward<Args>(args)...);
+    t.detach();
+    return result_f;
 }
 #endif
-double do_multiplus_work(double const &val);
-int do_mod(int const &val);
-int do_1();
-void spawn_task_test();
+void test_spawn_task();
 
 //4.4.2 Sybchronizing operations with message passing
 //Listing 4.15 A simple implementation of an ATM logic class

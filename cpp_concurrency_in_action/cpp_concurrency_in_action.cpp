@@ -67,21 +67,21 @@ int main() {
 #endif
 
 #if 0//chapter4
-    sync_conc_opera::wait_for_flag();
-    sync_conc_opera::wait_for_condition_variable();
-    sync_conc_opera::threadsafe_queue_test();
-    sync_conc_opera::future_async_test();
-    sync_conc_opera::future_async_struct_test();
-    sync_conc_opera::packaged_task_test();
-    sync_conc_opera::process_connections_test();
-    sync_conc_opera::future_exception_test();
-    sync_conc_opera::promise_exception_test();
-    sync_conc_opera::durations_test();
-    sync_conc_opera::time_points_test();
-    sync_conc_opera::condition_variable_timeout_test();
-    sync_conc_opera::sequential_quick_sort_test();
-    sync_conc_opera::parallel_quick_sort_test();
-    sync_conc_opera::spawn_task_test();
+    sync_conc_opera::test_wait_for_flag();
+    sync_conc_opera::test_wait_for_condition_variable();
+    sync_conc_opera::test_threadsafe_queue();
+    sync_conc_opera::test_future_async();
+    sync_conc_opera::test_future_async_struct();
+    sync_conc_opera::test_packaged_task();
+    sync_conc_opera::test_process_connections();
+    sync_conc_opera::test_future_exception();
+    sync_conc_opera::test_promise_exception();
+    sync_conc_opera::test_durations();
+    sync_conc_opera::test_time_points();
+    sync_conc_opera::test_condition_variable_timeout();
+    sync_conc_opera::test_sequential_quick_sort();
+    sync_conc_opera::test_parallel_quick_sort();
+    sync_conc_opera::test_spawn_task();
 #endif
 
 #if 0//chapter5
